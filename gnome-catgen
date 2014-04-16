@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+CATPATH="${HOME}/.local/share/applications-categories"
+
+# SCRIPT
+if [ -n "$1" ]; then
+    if [ "$1" = "get" ]; then
+        echo -n "Category list: "
+        gsettings get org.gnome.desktop.app-folders folder-children
+        gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do echo -e "\n$cat:"; gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps; done
+    elif [ "$1" = "set" ]; then
+        if [ ! -d "$CATPATH" ]; then
+            echo "The configuration folder defined @ '$CATPATH' does not exist or can't be accessed"
+            exit 1
+        fi
+        # Set the category types and reset any current app data
+        echo "Setting new category list"
+        CATEGORIES=$(ls -1 "${CATPATH}" | grep -e ".category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
+        gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
+
+        echo "Clearing old category data before populating"
+        dconf reset -f /org/gnome/desktop/app-folders/folders/
+
+        # Add the app data for each category and output an error if none is defined
+        gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
+            echo -e "\nAdding category: ${cat}"
+            CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "${CATPATH}/${cat}.category" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps "$CATEGORY"
+        done
+
+        echo -e "\nDone!"
+    elif [ "$1" = "clear" ]; then
+        # Set the category types and reset any current app data
+        gsettings set org.gnome.desktop.app-folders folder-children "[]"
+        dconf reset -f /org/gnome/desktop/app-folders/folders/
+    else
+        echo "Invalid option: ${1}"
+        exit 1
+    fi
+else
+    echo "Please run with the command 'get' 'set' or 'clear'"
+    exit 1
+fi
