@@ -24,7 +24,7 @@ if [ -n "$1" ]; then
             fi
         done
         grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.2"
-        cat "${TMPFILE}.2" | sort > "${TMPFILE}.1"
+        cat "${TMPFILE}.2" | sort -u > "${TMPFILE}.1"
 
         echo -n > "$TMPFILE"
         cat "${TMPFILE}.1" | while read -r program; do
