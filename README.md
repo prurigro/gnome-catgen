@@ -7,7 +7,7 @@ A Gnome 3.12 application-overview folder configuration tool
 To configure the folders gnome-catget will generate when `gnome-catgen set` is run:
 
 1. Create a folder @ `~/.local/share/applications-categories`.
-2. Create a file in that folder with the name of the category you want it to represent.
+2. Create a file in that folder with the name of the category you want it to represent and the **.category** extension.
 3. Place the filename of the .desktop file of an applicaton you'd like in the folder on a single line.
 4. Repeat step **2** for more categories and step **3** for more applications until things are how you want them.
 5. Run `gnome-catgen set` to configure your settings, then `gnome-catgen get` to check the results.
