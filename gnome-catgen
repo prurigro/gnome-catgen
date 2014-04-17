@@ -44,6 +44,8 @@ function getremaining() {
     [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
 }
 
+[[ -d "$CATPATH" ]] || install -d "$CATPATH"
+
 if [ -n "$1" ]; then
     if [ "$1" = "get" ]; then
         echo -n "Folders: "
