@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
 
 CATPATH="${HOME}/.local/share/applications-categories"
+TMPFILE="/tmp/gnome-catgen.tmp"
 
 # SCRIPT
 if [ -n "$1" ]; then
     if [ "$1" = "get" ]; then
-        echo -n "Category list: "
+        echo -n "Folders: "
         gsettings get org.gnome.desktop.app-folders folder-children
         gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do echo -e "\n$cat:"; gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps; done
+
+        echo -e "\nPrograms in Activities without folders:"
+        grep -i -l -h -v -e "^NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
+        grep -i -l -h -v -e "^NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.1"
+        echo -n > "$TMPFILE"
+        cat "${TMPFILE}.1" | while read -r program; do
+            if [ ! $(cat "${CATPATH}"/*.category | grep -m 1 "$program") ]; then
+                echo "$program" >> "$TMPFILE"
+            fi
+        done
+        cat "$TMPFILE"
+        [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
+        [[ -f "${TMPFILE}.1" ]] && rm "${TMPFILE}.1"
     elif [ "$1" = "set" ]; then
         if [ ! -d "$CATPATH" ]; then
             echo "The configuration folder defined @ '$CATPATH' does not exist or can't be accessed"
@@ -24,21 +38,20 @@ if [ -n "$1" ]; then
         # Add the app data for each category and output an error if none is defined
         gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
             echo -e "\nAdding category: ${cat}"
-            echo -n > /tmp/category.gnome-catgen.tmp
+            echo -n > "$TMPFILE"
             cat "${CATPATH}/${cat}.category" | while read -r program; do
                 if [ $(echo "$program" | grep -v -e "[^[\ ]*#") ]; then
                     if [ -f "/usr/share/applications/${program}" ] || [ -f "${HOME}/.local/share/applications/${program}" ]; then
-                        echo "$program" >> /tmp/category.gnome-catgen.tmp
+                        echo "$program" >> "$TMPFILE"
                     fi
                 fi
             done
-            if [ ! $(cat /tmp/category.gnome-catgen.tmp | wc -l) = 0 ]; then
-                CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" /tmp/category.gnome-catgen.tmp | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
+            if [ ! $(cat "$TMPFILE" | wc -l) = 0 ]; then
+                CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
                 gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps "$CATEGORY"
             fi
         done
-        [[ -f /tmp/category.gnome-catgen.tmp ]] && rm /tmp/category.gnome-catgen.tmp
-
+        [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
         echo -e "\nDone!"
     elif [ "$1" = "clear" ]; then
         # Set the category types and reset any current app data
