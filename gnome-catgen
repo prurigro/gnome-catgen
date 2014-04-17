@@ -44,6 +44,20 @@ function getremaining() {
     [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
 }
 
+function help() {
+    echo -e "GNOME CATGEN (Folder Category Generator for Gnome 3.12)\n"
+    echo -e "To use, create files named after a folder category and ending with '.category' in '${CATPATH}/' (eg: '${CATPATH}/Games.category'), then inside each, put the filename of the .desktop file associated with an application you'd like to include on each line (eg: 'gvim.desktop'). Lines starting with # or that include .desktop files that don't exist in /usr/share/applications or ~/.local/share/applications will be ignored. When you're ready, run '$0 set' to generate your folders.\n"
+    echo "Please run with a command:"
+    echo -e "\t${APPNAME} get-folders | list the folder categories set for gnome (system)"
+    echo -e "\t${APPNAME} get-apps | list the apps for each folder (system)"
+    echo -e "\t${APPNAME} get-remaining | list the apps without a folder category (config)"
+    echo -e "\t${APPNAME} get | list all of the above with labels"
+    echo -e "\t${APPNAME} set | create folders and populate them with applications"
+    echo -e "\t${APPNAME} choose-remaining | choose a folder category for each app currently without"
+    echo -e "\t${APPNAME} clear | remove all folder categories and their contents\n"
+    echo -e "\t${APPNAME} help 'or' -h 'or' --help | display this help"
+}
+
 [[ -d "$CATPATH" ]] || install -d "$CATPATH"
 
 if [ -n "$1" ]; then
@@ -61,8 +75,8 @@ if [ -n "$1" ]; then
     elif [ "$1" = "get-remaining" ]; then
         getremaining
     elif [ "$1" = "set" ]; then
-        if [ ! -d "$CATPATH" ]; then
-            echo "The configuration folder defined @ '$CATPATH' does not exist or can't be accessed"
+        if [ ! -w "$CATPATH" ]; then
+            echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
             exit 1
         fi
         # Set the category types and reset any current app data
@@ -102,19 +116,16 @@ if [ -n "$1" ]; then
         # Set the category types and reset any current app data
         gsettings set org.gnome.desktop.app-folders folder-children "[]"
         dconf reset -f /org/gnome/desktop/app-folders/folders/
+    elif [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        help
+        exit 0
     else
-        echo "Invalid option: ${1}"
+        echo -e "Error: Invalid option: ${1}\n"
+        help
         exit 1
     fi
 else
-    echo -e "GNOME CATGEN (Folder Category Generator for Gnome 3.12)\n"
-    echo -e "To use, create files named after a folder category and ending with '.category' in '${CATPATH}/' (eg: '${CATPATH}/Games.category'), then inside each, put the filename of the .desktop file associated with an application you'd like to include on each line (eg: 'gvim.desktop'). Lines starting with # or that include .desktop files that don't exist in /usr/share/applications or ~/.local/share/applications will be ignored. When you're ready, run '$0 set' to generate your folders.\n"
-    echo "Please run with a command:"
-    echo -e "\t${APPNAME} get-folders | list the folder categories set for gnome (system)"
-    echo -e "\t${APPNAME} get-apps | list the apps for each folder (system)"
-    echo -e "\t${APPNAME} get-remaining | list the apps without a folder category (config)"
-    echo -e "\t${APPNAME} get | list all of the above with labels"
-    echo -e "\t${APPNAME} set | create folders and populate them with applications"
-    echo -e "\t${APPNAME} choose-remaining | choose a folder category for each app currently without"
-    echo -e "\t${APPNAME} clear | remove all folder categories and their contents"
+    echo -e "Error: please run with a valid command\n"
+    help
+    exit 1
 fi
