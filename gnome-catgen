@@ -12,7 +12,20 @@ if [ -n "$1" ]; then
 
         echo -e "\nPrograms in Activities without folders:"
         grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
-        grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.1"
+
+        echo -n > "${TMPFILE}.2"
+        cat "${TMPFILE}.1" | while read -r program; do
+            if [ -f "${HOME}/.local/share/applications/${program}" ]; then
+                if [ ! $(cat "${HOME}/.local/share/applications/${program}" | grep -i "NoDisplay=true") ]; then
+                    echo "$program" >> "${TMPFILE}.2"
+                fi
+            else
+                echo "$program" >> "${TMPFILE}.2"
+            fi
+        done
+        grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.2"
+        cat "${TMPFILE}.2" | sort > "${TMPFILE}.1"
+
         echo -n > "$TMPFILE"
         cat "${TMPFILE}.1" | while read -r program; do
             if [ ! $(cat "${CATPATH}"/*.category | grep -m 1 "$program") ]; then
@@ -22,6 +35,7 @@ if [ -n "$1" ]; then
         cat "$TMPFILE"
         [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
         [[ -f "${TMPFILE}.1" ]] && rm "${TMPFILE}.1"
+        [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
     elif [ "$1" = "set" ]; then
         if [ ! -d "$CATPATH" ]; then
             echo "The configuration folder defined @ '$CATPATH' does not exist or can't be accessed"
