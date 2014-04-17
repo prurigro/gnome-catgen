@@ -13,6 +13,12 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 5. Run `gnome-catgen set` to configure your settings, then `gnome-catgen get` to check the results.
 6. To remove all folders without having to change your config, run `gnome-catgen clear`.
 
+## NOTES ON CONFIG ##
+
+* Lines where the first non-space is a # are ignored
+* Lines listing programs with desktop files that aren't in '/usr/share/applications' or '~/.local/share/applications' won't be added
+* Blank lines will be skipped
+
 ## COMMANDS ##
 
 * **gnome-catgen get**: Returns the list of categories followed by a list of the applications associated with each one.
