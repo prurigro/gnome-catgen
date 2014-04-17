@@ -44,7 +44,6 @@ function getremaining() {
     [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
 }
 
-# SCRIPT
 if [ -n "$1" ]; then
     if [ "$1" = "get" ]; then
         echo -n "Folders: "
@@ -90,6 +89,13 @@ if [ -n "$1" ]; then
         done
         [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
         echo -e "\nDone!"
+    elif [ "$1" = "choose-remaining" ]; then
+        echo -e "Type the desired category name for each program then hit enter, ctrl-c to quit.\n"
+        getremaining | while read -r app; do
+            echo "$app: "
+            read CAT </dev/tty
+            [[ ! -z "$CAT" ]] && echo "$app" >> "${CATPATH}/${CAT}.category"
+        done
     elif [ "$1" = "clear" ]; then
         # Set the category types and reset any current app data
         gsettings set org.gnome.desktop.app-folders folder-children "[]"
@@ -107,5 +113,6 @@ else
     echo -e "\t${APPNAME} get-remaining | list the apps without a folder category (config)"
     echo -e "\t${APPNAME} get | list all of the above with labels"
     echo -e "\t${APPNAME} set | create folders and populate them with applications"
+    echo -e "\t${APPNAME} choose-remaining | choose a folder category for each app currently without"
     echo -e "\t${APPNAME} clear | remove all folder categories and their contents"
 fi
