@@ -11,8 +11,8 @@ if [ -n "$1" ]; then
         gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do echo -e "\n$cat:"; gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps; done
 
         echo -e "\nPrograms in Activities without folders:"
-        grep -i -l -h -v -e "^NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
-        grep -i -l -h -v -e "^NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.1"
+        grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
+        grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.1"
         echo -n > "$TMPFILE"
         cat "${TMPFILE}.1" | while read -r program; do
             if [ ! $(cat "${CATPATH}"/*.category | grep -m 1 "$program") ]; then
