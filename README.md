@@ -31,4 +31,7 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 
 ## CREDITS ##
 
-* Written by prurigro: [GitHub Projects](https://github.com/prurigro) | [Arch Linux AUR Packages](https://aur.archlinux.org/packages/?SeB=m&K=prurigro)
+Written by prurigro:
+
+* [GitHub Projects](https://github.com/prurigro)
+* [Arch Linux AUR Packages](https://aur.archlinux.org/packages/?SeB=m&K=prurigro)
