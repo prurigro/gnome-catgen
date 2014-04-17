@@ -2,40 +2,63 @@
 
 CATPATH="${HOME}/.local/share/applications-categories"
 TMPFILE="/tmp/gnome-catgen.tmp"
+APPNAME=$(echo $0 | grep -o -e "[^\/]*$")
+
+function getfolders() {
+    gsettings get org.gnome.desktop.app-folders folder-children
+}
+
+function getapps() {
+    gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
+        echo -n "$cat: "
+        gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps
+        echo
+    done
+}
+
+function getremaining() {
+    grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
+
+    echo -n > "${TMPFILE}.2"
+    cat "${TMPFILE}.1" | while read -r program; do
+        if [ -f "${HOME}/.local/share/applications/${program}" ]; then
+            if [ ! $(cat "${HOME}/.local/share/applications/${program}" | grep -i "NoDisplay=true") ]; then
+                echo "$program" >> "${TMPFILE}.2"
+            fi
+        else
+            echo "$program" >> "${TMPFILE}.2"
+        fi
+    done
+    grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.2"
+    cat "${TMPFILE}.2" | sort -u > "${TMPFILE}.1"
+
+    echo -n > "$TMPFILE"
+    cat "${TMPFILE}.1" | while read -r program; do
+        if [ ! $(cat "${CATPATH}"/*.category  | grep -v -e "[^[\ ]*#" | grep -m 1 "$program") ]; then
+            echo "$program" >> "$TMPFILE"
+        fi
+    done
+    cat "$TMPFILE"
+    [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
+    [[ -f "${TMPFILE}.1" ]] && rm "${TMPFILE}.1"
+    [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
+}
 
 # SCRIPT
 if [ -n "$1" ]; then
     if [ "$1" = "get" ]; then
         echo -n "Folders: "
-        gsettings get org.gnome.desktop.app-folders folder-children
-        gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do echo -e "\n$cat:"; gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps; done
-
-        echo -e "\nPrograms in Activities without folders:"
-        grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
-
-        echo -n > "${TMPFILE}.2"
-        cat "${TMPFILE}.1" | while read -r program; do
-            if [ -f "${HOME}/.local/share/applications/${program}" ]; then
-                if [ ! $(cat "${HOME}/.local/share/applications/${program}" | grep -i "NoDisplay=true") ]; then
-                    echo "$program" >> "${TMPFILE}.2"
-                fi
-            else
-                echo "$program" >> "${TMPFILE}.2"
-            fi
-        done
-        grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.2"
-        cat "${TMPFILE}.2" | sort -u > "${TMPFILE}.1"
-
-        echo -n > "$TMPFILE"
-        cat "${TMPFILE}.1" | while read -r program; do
-            if [ ! $(cat "${CATPATH}"/*.category | grep -m 1 "$program") ]; then
-                echo "$program" >> "$TMPFILE"
-            fi
-        done
-        cat "$TMPFILE"
-        [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
-        [[ -f "${TMPFILE}.1" ]] && rm "${TMPFILE}.1"
-        [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
+        getfolders
+        echo
+        getapps
+        echo "Programs in Activities without folders:"
+        getremaining
+    elif [ "$1" = "get-folders" ]; then
+        getfolders
+    elif [ "$1" = "get-apps" ]; then
+        getapps
+    elif [ "$1" = "get-remaining" ]; then
+        getremaining
     elif [ "$1" = "set" ]; then
         if [ ! -d "$CATPATH" ]; then
             echo "The configuration folder defined @ '$CATPATH' does not exist or can't be accessed"
@@ -76,6 +99,13 @@ if [ -n "$1" ]; then
         exit 1
     fi
 else
-    echo "Please run with the command 'get' 'set' or 'clear'"
-    exit 1
+    echo -e "GNOME CATGEN (Folder Category Generator for Gnome 3.12)\n"
+    echo -e "To use, create files named after a folder category and ending with '.category' in '${CATPATH}/' (eg: '${CATPATH}/Games.category'), then inside each, put the filename of the .desktop file associated with an application you'd like to include on each line (eg: 'gvim.desktop'). Lines starting with # or that include .desktop files that don't exist in /usr/share/applications or ~/.local/share/applications will be ignored. When you're ready, run '$0 set' to generate your folders.\n"
+    echo "Please run with a command:"
+    echo -e "\t${APPNAME} get-folders | list the folder categories set for gnome (system)"
+    echo -e "\t${APPNAME} get-apps | list the apps for each folder (system)"
+    echo -e "\t${APPNAME} get-remaining | list the apps without a folder category (config)"
+    echo -e "\t${APPNAME} get | list all of the above with labels"
+    echo -e "\t${APPNAME} set | create folders and populate them with applications"
+    echo -e "\t${APPNAME} clear | remove all folder categories and their contents"
 fi
