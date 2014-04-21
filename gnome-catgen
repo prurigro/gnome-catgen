@@ -17,6 +17,12 @@ function getapps() {
 }
 
 function getremaining() {
+    # Fail if the config directory doesn't exist
+    if [ ! -d "$CATPATH" ]; then
+        echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
+        exit 1
+    fi
+
     grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
 
     echo -n > "${TMPFILE}.2"
@@ -48,13 +54,13 @@ function help() {
     echo -e "GNOME CATGEN (Folder Category Generator for Gnome 3.12)\n"
     echo -e "To use, create files named after a folder category and ending with '.category' in '${CATPATH}/' (eg: '${CATPATH}/Games.category'), then inside each, put the filename of the .desktop file associated with an application you'd like to include on each line (eg: 'gvim.desktop'). Lines starting with # or that include .desktop files that don't exist in /usr/share/applications or ~/.local/share/applications will be ignored. When you're ready, run '$0 set' to generate your folders.\n"
     echo "Please run with a command:"
-    echo -e "\t${APPNAME} get-folders | list the folder categories set for gnome (system)"
-    echo -e "\t${APPNAME} get-apps | list the apps for each folder (system)"
-    echo -e "\t${APPNAME} get-remaining | list the apps without a folder category (config)"
-    echo -e "\t${APPNAME} get | list all of the above with labels"
-    echo -e "\t${APPNAME} set | create folders and populate them with applications"
-    echo -e "\t${APPNAME} choose-remaining | choose a folder category for each app currently without"
-    echo -e "\t${APPNAME} clear | remove all folder categories and their contents\n"
+    echo -e "\t${APPNAME} get-folders | list the folder categories set in dconf"
+    echo -e "\t${APPNAME} get-apps | list the apps for each folder set in dconf"
+    echo -e "\t${APPNAME} get-remaining -or- getr | list the apps without a folder category in the config"
+    echo -e "\t${APPNAME} get | list all of the above with labels\n"
+    echo -e "\t${APPNAME} choose-remaining -or- chooser | choose folder categories for apps currently without one in the config"
+    echo -e "\t${APPNAME} set | create and populate configured folder categories dconf"
+    echo -e "\t${APPNAME} clear | remove all folder categories and their contents from dconf (doesn't touch config)\n"
     echo -e "\t${APPNAME} help 'or' -h 'or' --help | display this help"
 }
 
@@ -72,13 +78,15 @@ if [ -n "$1" ]; then
         getfolders
     elif [ "$1" = "get-apps" ]; then
         getapps
-    elif [ "$1" = "get-remaining" ]; then
+    elif [ "$1" = "get-remaining" ] || [ "$1" = "getr" ]; then
         getremaining
     elif [ "$1" = "set" ]; then
-        if [ ! -w "$CATPATH" ]; then
+        # Fail if the config directory doesn't exist
+        if [ ! -d "$CATPATH" ]; then
             echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
             exit 1
         fi
+
         # Set the category types and reset any current app data
         echo "Setting new category list"
         CATEGORIES=$(ls -1 "${CATPATH}" | grep -e ".category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
@@ -105,12 +113,18 @@ if [ -n "$1" ]; then
         done
         [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
         echo -e "\nDone!"
-    elif [ "$1" = "choose-remaining" ]; then
-        echo -e "Type the desired category name for each program then hit enter, ctrl-c to quit.\n"
+    elif [ "$1" = "choose-remaining" ] || [ "$1" = "chooser" ]; then
+        # Fail if the config directory isn't available and writable
+        if [ ! -w "$CATPATH" ]; then
+            echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
+            exit 1
+        fi
+
+        echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
         getremaining | while read -r app; do
             echo "$app: "
             read CAT </dev/tty
-            [[ ! -z "$CAT" ]] && echo "$app" >> "${CATPATH}/${CAT}.category"
+            [[ ! -z "$CAT" ]] && echo "$app" >> "${CATPATH}/${CAT}.category" || echo "Skipping ${app}..."
         done
     elif [ "$1" = "clear" ]; then
         # Set the category types and reset any current app data

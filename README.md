@@ -21,13 +21,19 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 
 ## COMMANDS ##
 
-* **gnome-catgen get**: Returns the list of folder categories followed by a list of the applications in each, then a list of programs without folders.
+### READ ###
 * **gnome-catgen get-folders**: Returns the list of  folder categories.
 * **gnome-catgen get-apps**: Returns the list of applications in each folder category.
-* **gnome-catgen get-remaining**: Returns the list of programs that aren't currently in folders.
+* **gnome-catgen get-remaining** -or- **getr**: Returns the list of programs that aren't currently in folders.
+* **gnome-catgen get**: Returns the list of folder categories followed by a list of the applications in each, then a list of programs without folders.
+
+### WRITE ###
+* **gnome-catgen choose-remaining** -or- **chooser**: Prompts for a category name for each remaining application without a category folder.
 * **gnome-catgen set**: Configures the folder categories and their included applications as defined.
-* **gnome-catgen choose-remaining**: Prompts for a category name for each remaining application without a category folder.
 * **gnome-catgen clear**: Removes all application lists currently set and defines the list of folder categories as blank.
+
+### HELP ###
+* **gnome-catgen help** 'or' **-h** 'or' **--help**: Shows a help dialog with the various available commands.
 
 ## CREDITS ##
 
