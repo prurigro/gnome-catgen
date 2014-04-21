@@ -33,7 +33,7 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 * **gnome-catgen clear**: Removes all application lists currently set and defines the list of folder categories as blank.
 
 ### HELP ###
-* **gnome-catgen help** 'or' **-h** 'or' **--help**: Shows a help dialog with the various available commands.
+* **gnome-catgen help** -or- **-h** -or- **--help**: Shows a help dialog with the various available commands.
 
 ## CREDITS ##
 
