@@ -79,6 +79,7 @@ function set() {
         if [ ! $(cat "$TMPFILE" | wc -l) = 0 ]; then
             CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps "$CATEGORY"
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ name "${cat}"
         fi
     done
     [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
