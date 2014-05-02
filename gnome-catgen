@@ -11,7 +11,7 @@ function getfolders() {
 function getapps() {
     gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
         echo -n "$cat: "
-        gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps
+        gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps
         echo
     done
 }
@@ -59,7 +59,7 @@ function set() {
 
     # Set the category types and reset any current app data
     echo -e "Setting configured folder categories in dconf...\n"
-    CATEGORIES=$(ls -1 "${CATPATH}" | grep -e ".category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
+    CATEGORIES=$(for cat in "${CATPATH}"/*; do [[ ! -z $(cat "$cat" | grep -v -e "[^[\ ]*#") ]] && echo "$cat"; done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
     gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
 
     echo "Clearing old category data before populating"
@@ -70,7 +70,7 @@ function set() {
         echo -e "\nAdding category: ${cat}"
         echo -n > "$TMPFILE"
         cat "${CATPATH}/${cat}.category" | while read -r program; do
-            if [ $(echo "$program" | grep -v -e "[^[\ ]*#") ]; then
+            if [ "$(echo "$program" | grep -v -e "[^[\ ]*#")" ]; then
                 if [ -f "/usr/share/applications/${program}" ] || [ -f "${HOME}/.local/share/applications/${program}" ]; then
                     echo "$program" >> "$TMPFILE"
                 fi
@@ -78,8 +78,8 @@ function set() {
         done
         if [ ! $(cat "$TMPFILE" | wc -l) = 0 ]; then
             CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
-            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ apps "$CATEGORY"
-            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/${cat}/ name "${cat}"
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps "$CATEGORY"
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ name "$cat"
         fi
     done
     [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
