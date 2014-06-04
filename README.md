@@ -2,7 +2,15 @@
 
 A Gnome 3.12 application-overview folder configuration tool
 
-## CONFIG ##
+## ADD APPLICATIONS TO CATEGORY FOLDERS ##
+
+There are two ways to use gnome-catgen; one is to have it interactively choose category folders for uncategorized applications, and the other is to manually create and add application .desktop filenames to .category files before having it apply your configuration.
+
+### CONFIGURE INTERACTIVELY ###
+
+To have gnome-catgen interactively run through each uncategorized application and let you choose a category, run: `gnome-catgen choose-remaining` and follow the instructions.
+
+### CONFIGURE BY HAND ###
 
 To configure the folders gnome-catget will generate when `gnome-catgen set` is run:
 
@@ -13,7 +21,7 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 5. Run `gnome-catgen set` to configure your settings, then `gnome-catgen get` to check the results.
 6. To remove all folders without having to change your config, run `gnome-catgen clear`.
 
-## NOTES ON CONFIG ##
+## NOTES ON EDITING FOLDER CATEGORY FILES ##
 
 * Lines where the first non-space is a # are ignored
 * Lines listing programs with desktop files that aren't in '/usr/share/applications' or '~/.local/share/applications' won't be added
@@ -22,22 +30,26 @@ To configure the folders gnome-catget will generate when `gnome-catgen set` is r
 ## COMMANDS ##
 
 ### READ ###
-* **gnome-catgen get-folders**: Returns the list of  folder categories.
-* **gnome-catgen get-apps**: Returns the list of applications in each folder category.
-* **gnome-catgen get-remaining** -or- **getr**: Returns the list of programs that aren't currently in folders.
-* **gnome-catgen get**: Returns the list of folder categories followed by a list of the applications in each, then a list of programs without folders.
+* `gnome-catgen get-folders`: Returns the list of  folder categories.
+* `gnome-catgen get-apps`: Returns the list of applications in each folder category.
+* `gnome-catgen get-remaining` -or- **getr**: Returns the list of programs that aren't currently in folders.
+* `gnome-catgen get`: Returns the list of folder categories followed by a list of the applications in each, then a list of programs without folders.
 
 ### WRITE ###
-* **gnome-catgen choose-remaining** -or- **chooser**: Prompts for a category name for each remaining application without a category folder.
-* **gnome-catgen set**: Configures the folder categories and their included applications as defined.
-* **gnome-catgen clear**: Removes all application lists currently set and defines the list of folder categories as blank.
+* `gnome-catgen choose-remaining` -or- **chooser**: Prompts for a category name for each remaining application without a category folder.
+* `gnome-catgen set`: Configures the folder categories and their included applications as defined.
+* `gnome-catgen clear`: Removes all application lists currently set and defines the list of folder categories as blank.
 
 ### HELP ###
-* **gnome-catgen help** -or- **-h** -or- **--help**: Shows a help dialog with the various available commands.
+* `gnome-catgen help` -or- **-h** -or- **--help**: Shows a help dialog with the various available commands.
 
 ## CREDITS ##
 
-Written by prurigro:
+Written by Kevin MacMartin:
 
 * [GitHub Projects](https://github.com/prurigro)
 * [Arch Linux AUR Packages](https://aur.archlinux.org/packages/?SeB=m&K=prurigro)
+
+## LICENSE ##
+
+Licensed under the [MIT license](http://opensource.org/licenses/MIT).
