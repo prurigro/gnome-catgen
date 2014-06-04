@@ -94,6 +94,13 @@ function chooser() {
     fi
 
     echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
+
+    echo "Current Categories: "
+    for each in "${CATPATH}/"*.category; do
+        echo -n "$each " | sed 's|^.*/||;s|\.category||'
+    done
+    echo -e "\n"
+
     getr | while read -r app; do
         echo -n "$app: "
         read CAT </dev/tty
