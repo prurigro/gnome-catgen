@@ -95,29 +95,35 @@ function chooser() {
 
     echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
 
-    echo "Current Categories: "
-    for each in "${CATPATH}/"*.category; do
-        echo -n "$each " | sed 's|^.*/||;s|\.category||'
-    done
-    echo -e "\n"
-
+    ADDED=0
     getr | while read -r app; do
+        [[ $ADDED = 0 ]] && (getfolders; echo)
+
         echo -n "$app: "
         read CAT </dev/tty
-        [[ ! -z "$CAT" ]] && echo "$app" >> "${CATPATH}/${CAT}.category" || echo "Skipping ${app}..."
-    done
-
-    while [ 0 ]; do
-        echo -en "\nCreate and populate configured folder categories in dconf? [y/n]: "
-        read SET
-        if [ "$SET" = "Y" ] || [ "$SET" = "y" ]; then
-            set; break
-        elif [ "$SET" = "N" ] || [ "$SET" = "n" ]; then
-            break
+        if [ ! -z "$CAT" ]; then
+            ADDED=1
+            echo "$app" >> "${CATPATH}/${CAT}.category"
         else
-            echo "Error: Invalid option"
+            echo "Skipping ${app}..."
         fi
     done
+
+    if [ $ADDED = 1 ]; then
+        while [ 0 ]; do
+            echo -en "\nUpdate configured folder categories in Gnome? [y/n]: "
+            read SET
+            if [ "$SET" = "Y" ] || [ "$SET" = "y" ]; then
+                set; break
+            elif [ "$SET" = "N" ] || [ "$SET" = "n" ]; then
+                break
+            else
+                echo "Error: Invalid option"
+            fi
+        done
+    else
+        echo "No uncategorized applications to configure"
+    fi
 }
 
 function help() {
