@@ -59,7 +59,7 @@ function set() {
 
     # Set the category types and reset any current app data
     echo -e "Setting configured folder categories in dconf...\n"
-    CATEGORIES=$(for cat in "${CATPATH}"/*; do [[ ! -z $(cat "$cat" | grep -v -e "[^[\ ]*#") ]] && echo "$cat"; done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
+    CATEGORIES=$(for cat in "${CATPATH}"/*.category; do [[ ! -z $(cat "$cat" | grep -v -e "[^[\ ]*#") ]] && echo "$cat"; done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
     gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
 
     echo "Clearing old category data before populating"
@@ -93,28 +93,29 @@ function chooser() {
         exit 1
     fi
 
-    echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
+    # Create a temporary file to track whether changes were made
+    echo "0" > "${TMPFILE}.chooser"
 
-    ADDED=0
+    echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
     getr | while read -r app; do
-        [[ $ADDED = 0 ]] && (getfolders; echo)
+        [[ $(cat "${TMPFILE}.chooser") = 0 ]] && (getfolders; echo)
 
         echo -n "$app: "
         read CAT </dev/tty
         if [ ! -z "$CAT" ]; then
-            ADDED=1
+            echo 1 > "${TMPFILE}.chooser"
             echo "$app" >> "${CATPATH}/${CAT}.category"
         else
             echo "Skipping ${app}..."
         fi
     done
 
-    if [ $ADDED = 1 ]; then
+    if [ $(cat "${TMPFILE}.chooser") = 1 ]; then
         while [ 0 ]; do
             echo -en "\nUpdate configured folder categories in Gnome? [y/n]: "
             read SET
             if [ "$SET" = "Y" ] || [ "$SET" = "y" ]; then
-                set; break
+                echo; set; break
             elif [ "$SET" = "N" ] || [ "$SET" = "n" ]; then
                 break
             else
@@ -124,6 +125,7 @@ function chooser() {
     else
         echo "No uncategorized applications to configure"
     fi
+    [[ -f "${TMPFILE}.chooser" ]] && rm "${TMPFILE}.chooser"
 }
 
 function help() {
