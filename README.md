@@ -1,47 +1,52 @@
-# Gnome Catgen #
+# gnome-catgen #
 
-A Gnome 3.12 application-overview folder configuration tool
+A Gnome 3.12 Folder Category Configuration Tool
 
-## ADD APPLICATIONS TO CATEGORY FOLDERS ##
+## Configuration ##
 
-There are two ways to use gnome-catgen; one is to have it interactively choose category folders for uncategorized applications, and the other is to manually create and add application .desktop filenames to .category files before having it apply your configuration.
+### Interactive Category Selection ###
 
-### CONFIGURE INTERACTIVELY ###
+While configuration is primarily done by hand, running `gnome-catgen -c` or `gnome-catgen --choose-remaining` will begin iterating through the list of applications that aren't currently in a folder and let you choose where you would like them to go.
 
-To have gnome-catgen interactively run through each uncategorized application and let you choose a category, run: `gnome-catgen choose-remaining` and follow the instructions.
+In this mode you can do the following:
 
-### CONFIGURE BY HAND ###
+* Enter the name of a folder category to add the current application.
+* Enter a blank line to skip the current application.
+* Press ctrl-c to quit at any time.
 
-To configure the folders gnome-catget will generate when `gnome-catgen set` is run:
+Once all the applications without a folder have been cycled through, **gnome-catgen** will offer the option of applying the changes you just made to your config. If you choose not to apply the changes at this point, you can do so later by running: `gnome-catgen -s`.
 
-1. Create a folder @ `~/.local/share/applications-categories`.
-2. Create a file in that folder with the name of the category you want it to represent and the **.category** extension.
-3. Place the filename of the .desktop file of an applicaton you'd like in the folder on a single line.
-4. Repeat step **2** for more categories and step **3** for more applications until things are how you want them.
-5. Run `gnome-catgen set` to configure your settings, then `gnome-catgen get` to check the results.
-6. To remove all folders without having to change your config, run `gnome-catgen clear`.
+### Configure Category Files ###
 
-## NOTES ON EDITING FOLDER CATEGORY FILES ##
+To configure the folder category for each application, (if necessary) create and browse to: `~/.local/share/applications-categories`
 
-* Lines where the first non-space is a # are ignored
-* Lines listing programs with desktop files that aren't in '/usr/share/applications' or '~/.local/share/applications' won't be added
-* Blank lines will be skipped
+1. In here, create files with the `.category` extension and the name of the category they will represent.
+2. Inside `.category` files, one application's .desktop filename can be added to each line, to add the application to that folder category.
+3. Once everything is configured how you'd like it, run: `gnome-catgen set` to apply your configuration.
 
-## COMMANDS ##
+### Editing Category Files ###
 
-### READ ###
-* `gnome-catgen get-folders`: Returns the list of  folder categories.
-* `gnome-catgen get-apps`: Returns the list of applications in each folder category.
-* `gnome-catgen get-remaining` -or- **getr**: Returns the list of programs that aren't currently in folders.
-* `gnome-catgen get`: Returns the list of folder categories followed by a list of the applications in each, then a list of programs without folders.
+* Blank lines are ignored.
+* Lines where the first non-whitespace character is a # considered commented and are ignored.
 
-### WRITE ###
-* `gnome-catgen choose-remaining` -or- **chooser**: Prompts for a category name for each remaining application without a category folder.
-* `gnome-catgen set`: Configures the folder categories and their included applications as defined.
-* `gnome-catgen clear`: Removes all application lists currently set and defines the list of folder categories as blank.
+## Commands ##
 
-### HELP ###
-* `gnome-catgen help` -or- **-h** -or- **--help**: Shows a help dialog with the various available commands.
+### Read ###
+
+* `gnome-catgen -f` | `--get-folders`: list current folders
+* `gnome-catgen -a` | `--get-apps`: list current apps in each folder
+* `gnome-catgen -r` | `--get-remaining`: list apps without a folder
+* `gnome-catgen -g` | `--get`: list all of the above
+
+### Write ###
+
+* `gnome-catgen -s` | `--set`: apply current folder configuration
+* `gnome-catgen -x` | `--clear`: remove applied folder configuration
+* `gnome-catgen -c` | `--choose-remaining`: interactively assign folders to apps without
+
+### Info ###
+
+* `gnome-catgen -h` | `--help`: display this help
 
 ## CREDITS ##
 

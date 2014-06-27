@@ -1,178 +1,242 @@
 #!/usr/bin/env bash
 
-CATPATH="${HOME}/.local/share/applications-categories"
+SYSTEMAPPS="/usr/share/applications"
+LOCALAPPS="${HOME}/.local/share/applications"
 TMPFILE="/tmp/gnome-catgen.tmp"
-APPNAME=$(echo $0 | grep -o -e "[^\/]*$")
 
+CATPATH="${LOCALAPPS}-categories"
+APPNAME=$(grep -o -e "[^\/]*$" <<< $0)
+
+# Gets the list of folders based on the dconf configuration
 function getfolders() {
-    gsettings get org.gnome.desktop.app-folders folder-children
+    gsettings get org.gnome.desktop.app-folders folder-children | sed 's|^@as \[\]|None|g'
+}
+
+# Gets the list of folders based on *.category
+function _getfolders() {
+    for cat in "${CATPATH}"/*.category; do
+        [[ -n "$(cat "$cat" | grep -v -e '^ *#')" ]] && echo "$cat"
+    done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' \
+        | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g"
 }
 
 function getapps() {
-    gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
-        echo -n "$cat: "
-        gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps
-        echo
-    done
+    while read -r cat; do
+        if [[ ! "$cat" = "@as" ]]; then
+            echo -n "$cat: "
+            gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps \
+                | grep -v "@as \[\]" || echo
+            echo
+        fi
+    done < <(gsettings get org.gnome.desktop.app-folders folder-children \
+        | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g")
 }
 
-function getr() {
-    # Fail if the config directory doesn't exist
-    if [ ! -d "$CATPATH" ]; then
-        echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
-        exit 1
-    fi
+function getremaining() {
+    # Fail if the config directory is read only or doesn't exist
+    [[ ! -w "$CATPATH" ]] \
+        && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
+        && exit 1
 
-    grep -i -L -h "NoDisplay=true" /usr/share/applications/*.desktop | grep -o -e "[^\/]*$" > "${TMPFILE}.1"
+    # Create a list of all the applications that don't have NoDisplay=true
+    grep -L -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
+        | grep -o -e "[^\/]*$" | sort -u > "${TMPFILE}"
 
-    echo -n > "${TMPFILE}.2"
-    cat "${TMPFILE}.1" | while read -r program; do
-        if [ -f "${HOME}/.local/share/applications/${program}" ]; then
-            if [ ! $(cat "${HOME}/.local/share/applications/${program}" | grep -i "NoDisplay=true") ]; then
-                echo "$program" >> "${TMPFILE}.2"
-            fi
-        else
-            echo "$program" >> "${TMPFILE}.2"
-        fi
+    # Remove $SYSTEMAPPS that have duplicate $LOCALAPPS that contain NoDisplay=true
+    for program in \
+        $(grep -l -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}"/*.desktop \
+            | grep -o -e "[^\/]*$" | sort -u); do
+                sed -i "s|$program||" "${TMPFILE}"
     done
-    grep -i -L -h "NoDisplay=true" "${HOME}"/.local/share/applications/*.desktop | grep -o -e "[^\/]*$" >> "${TMPFILE}.2"
-    cat "${TMPFILE}.2" | sort -u > "${TMPFILE}.1"
 
-    echo -n > "$TMPFILE"
-    cat "${TMPFILE}.1" | while read -r program; do
-        if [ ! $(cat "${CATPATH}"/*.category  | grep -v -e "[^[\ ]*#" | grep -m 1 "$program") ]; then
-            echo "$program" >> "$TMPFILE"
-        fi
+    # Remove all applications that are defined in gnome-catgen categories
+    for program in $(cat "${CATPATH}"/*.category  | grep -v -e "[^[\ ]*#" | sort -u); do
+        sed -i "s|$program||" "${TMPFILE}"
     done
-    cat "$TMPFILE"
+
+    # Output the results
+    cat "$TMPFILE" | grep ".desktop"
+
+    # Delete the tempfile
     [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
-    [[ -f "${TMPFILE}.1" ]] && rm "${TMPFILE}.1"
-    [[ -f "${TMPFILE}.2" ]] && rm "${TMPFILE}.2"
 }
 
 function set() {
-    # Fail if the config directory doesn't exist
-    if [ ! -d "$CATPATH" ]; then
-        echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
-        exit 1
-    fi
+    # Fail if the config directory doesn't exist, otherwise announce initiation
+    [[ ! -d "$CATPATH" ]] \
+        && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't readable" \
+        && exit 1
+    echo -e "Applying current folder configuration...\n"
 
-    # Set the category types and reset any current app data
-    echo -e "Setting configured folder categories in dconf...\n"
-    CATEGORIES=$(for cat in "${CATPATH}"/*.category; do [[ ! -z $(cat "$cat" | grep -v -e "[^[\ ]*#") ]] && echo "$cat"; done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g")
-    gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
-
-    echo "Clearing old category data before populating"
+    # Wipe out any old folder settings
+    echo "Clearing old category data before populating folders"
     dconf reset -f /org/gnome/desktop/app-folders/folders/
 
+    # Create a list of categories to work from using the non-empty .category files
+    _CATEGORIES=$(_getfolders)
+
+    # Start the list of dconf categories, built using the one above
+    CATEGORIES="["
+
     # Add the app data for each category and output an error if none is defined
-    gsettings get org.gnome.desktop.app-folders folder-children | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" | while read -r cat; do
-        echo -e "\nAdding category: ${cat}"
+    while read -r cat; do
+        # Reset the temp file
         echo -n > "$TMPFILE"
-        cat "${CATPATH}/${cat}.category" | while read -r program; do
-            if [ "$(echo "$program" | grep -v -e "[^[\ ]*#")" ]; then
-                if [ -f "/usr/share/applications/${program}" ] || [ -f "${HOME}/.local/share/applications/${program}" ]; then
-                    echo "$program" >> "$TMPFILE"
+
+        # Add applications from the category if they exist, are set to display and aren't commented
+        echo -e "\nEvaluating: ${cat}"
+        while read -r application; do
+            if [ $(grep -v -e "^ *#" <<< $application) ]; then
+                if [[ -f "${LOCALAPPS}/${application}" ]]; then
+                    [[ ! $(grep -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}/${application}") ]] \
+                        && echo "$application" >> "$TMPFILE" \
+                        && NOTEMPTY=1
+                elif [[ -f "${SYSTEMAPPS}/${application}" ]]; then
+                    [[ ! $(grep -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}/${application}") ]] \
+                        && echo "$application" >> "$TMPFILE" \
+                        && NOTEMPTY=1
                 fi
             fi
-        done
-        if [ ! $(cat "$TMPFILE" | wc -l) = 0 ]; then
-            CATEGORY=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
-            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps "$CATEGORY"
+        done < <(cat "${CATPATH}/${cat}.category")
+
+        # Write the category and its applications if the temp file isn't empty
+        if [[ -n "$NOTEMPTY" ]]; then
+            # Add $cat to the dconf categories list if it contained any valid apps
+            CATEGORIES="${CATEGORIES}, '${cat}'"
+
+            # Escape any quotes in the folder's category name, then write to dconf
+            [[ $(grep "'" <<< $cat) ]] && cat=$(sed "s|'|\\'|g" <<< $cat)
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ name "$cat"
+
+            # Get the application list and escape any quotes, then write to dconf
+            APPLICATIONS=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
+            [[ $(grep -e "'[^,]*'[^,]*'" <<< $APPLICATIONS) ]] \
+                && APPLICATIONS=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< $APPLICATIONS)
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps "$APPLICATIONS"
         fi
-    done
+
+        # Free the empty category marker so the next category has to set it again
+        unset NOTEMPTY
+    done < <(sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" <<< $_CATEGORIES)
+
+    # Finalize the dconf categories list then write to dconf
+    CATEGORIES="$(sed 's|\[, |\[|' <<< $CATEGORIES)]"
+    [[ $(grep -e "'[^,]*'[^,]*'" <<< $CATEGORIES) ]] \
+        && CATEGORIES=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< $CATEGORIES)
+    gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
+
+    # Delete the tempfile
     [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
     echo -e "\nDone!"
 }
 
-function chooser() {
-    # Fail if the config directory isn't available and writable
-    if [ ! -w "$CATPATH" ]; then
-        echo "The configuration folder '$CATPATH' is either read-only or it doesn't exist"
-        exit 1
-    fi
+function chooseremaining() {
+    # Fail if the config directory is read only or doesn't exist
+    [[ ! -w "$CATPATH" ]] \
+        && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
+        && exit 1
 
-    # Create a temporary file to track whether changes were made
-    echo "0" > "${TMPFILE}.chooser"
-
-    echo -e "Type the desired category name for each program then hit enter, blank to skip and ctrl-c to quit.\n"
-    getr | while read -r app; do
-        [[ $(cat "${TMPFILE}.chooser") = 0 ]] && (getfolders; echo)
-
-        echo -n "$app: "
-        read CAT </dev/tty
-        if [ ! -z "$CAT" ]; then
-            echo 1 > "${TMPFILE}.chooser"
-            echo "$app" >> "${CATPATH}/${CAT}.category"
-        else
-            echo "Skipping ${app}..."
-        fi
-    done
-
-    if [ $(cat "${TMPFILE}.chooser") = 1 ]; then
-        while [ 0 ]; do
-            echo -en "\nUpdate configured folder categories in Gnome? [y/n]: "
-            read SET
-            if [ "$SET" = "Y" ] || [ "$SET" = "y" ]; then
-                echo; set; break
-            elif [ "$SET" = "N" ] || [ "$SET" = "n" ]; then
-                break
+    # Start if applications without folders exist
+    REMAINING=$(getremaining)
+    if [ -n "$REMAINING" ]; then
+        # Cycle through the output of getremaining
+        echo -e "For each application input: a folder name | blank to skip | ctrl-c to quit.\n"
+        _getfolders; echo
+        while read -r app; do
+            echo -n "$app: "
+            read CATNAME </dev/tty
+            if [ -n "$CATNAME" ]; then
+                CHANGED=1
+                echo "$app" >> "${CATPATH}/${CATNAME}.category"
             else
-                echo "Error: Invalid option"
+                echo "Skipping ${app}..."
             fi
-        done
+        done <<<"$REMAINING"
+
+        # Offer to run the set function if changes were made
+        if [ -n "$CHANGED" ]; then
+            while [ 0 ]; do
+                echo -en "\nUpdate configured folder categories in Gnome? [y/n]: "
+                read SET
+                if [ "$SET" = "Y" ] || [ "$SET" = "y" ]; then
+                    echo; set; break
+                elif [ "$SET" = "N" ] || [ "$SET" = "n" ]; then
+                    break
+                else
+                    echo "Error: Invalid option"
+                fi
+            done
+        else
+            echo "Finished without making changes"
+        fi
     else
-        echo "No uncategorized applications to configure"
+        echo "No uncategorized applications found"
     fi
-    [[ -f "${TMPFILE}.chooser" ]] && rm "${TMPFILE}.chooser"
 }
 
 function help() {
-    echo -e "GNOME CATGEN (Folder Category Generator for Gnome 3.12)\n"
-    echo -e "To use, create files named after a folder category and ending with '.category' in '${CATPATH}/' (eg: '${CATPATH}/Games.category'), then inside each, put the filename of the .desktop file associated with an application you'd like to include on each line (eg: 'gvim.desktop'). Lines starting with # or that include .desktop files that don't exist in /usr/share/applications or ~/.local/share/applications will be ignored. When you're ready, run '$0 set' to generate your folders.\n"
-    echo "Please run with a command:"
-    echo -e "\t${APPNAME} get-folders | list the folder categories set in dconf"
-    echo -e "\t${APPNAME} get-apps | list the apps for each folder set in dconf"
-    echo -e "\t${APPNAME} get-remaining 'or' getr | list the apps without a folder category in the config"
-    echo -e "\t${APPNAME} get | list all of the above with labels\n"
-    echo -e "\t${APPNAME} choose-remaining 'or' chooser | choose folder categories for apps currently without one in the config"
-    echo -e "\t${APPNAME} set | create and populate configured folder categories in dconf"
-    echo -e "\t${APPNAME} clear | remove all folder categories and their contents from dconf (doesn't touch config)\n"
-    echo -e "\t${APPNAME} help 'or' -h 'or' --help | display this help"
+    # Fail if the config directory is read only or doesn't exist
+    [[ ! -w "$CATPATH" ]] \
+        && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
+        && exit 1
+
+    # Display help information
+    echo -e "${APPNAME} - Gnome 3.12 Folder Category Configuration Tool\n"
+    echo -e "Usage: ${APPNAME} option\n"
+    echo "Options:"
+    echo -e "    ${APPNAME} -f | --get-folders: list current folders"
+    echo -e "    ${APPNAME} -a | --get-apps: list current apps in each folder"
+    echo -e "    ${APPNAME} -r | --get-remaining: list apps without a folder"
+    echo -e "    ${APPNAME} -g | --get: list all of the above"
+    echo -e "    ${APPNAME} -s | --set: apply current folder configuration"
+    echo -e "    ${APPNAME} -x | --clear: remove applied folder configuration"
+    echo -e "    ${APPNAME} -c | --choose-remaining: interactively assign folders to apps without"
+    echo -e "    ${APPNAME} -h | --help: display this help"
 }
 
+# Install the gnome-catgen config folder if it doesn't exist
 [[ -d "$CATPATH" ]] || install -d "$CATPATH"
 
-if [ -n "$1" ]; then
-    if [ "$1" = "get-folders" ]; then
-        getfolders
-    elif [ "$1" = "get-apps" ]; then
-        getapps
-    elif [ "$1" = "get-remaining" ] || [ "$1" = "getr" ]; then
-        getr
-    elif [ "$1" = "get" ]; then
-        echo -n "Folders: "; getfolders
-        echo; getapps
-        echo "Programs in Activities without folders:"; getr
-    elif [ "$1" = "choose-remaining" ] || [ "$1" = "chooser" ]; then
-        chooser
-    elif [ "$1" = "set" ]; then
-        set
-    elif [ "$1" = "clear" ]; then
-        # Set the category types and reset any current app data
-        gsettings set org.gnome.desktop.app-folders folder-children "[]"
-        dconf reset -f /org/gnome/desktop/app-folders/folders/
-    elif [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-        help
-        exit 0
-    else
-        echo -e "Error: Invalid option: ${1}\n"
-        help
-        exit 1
-    fi
+# Parse commandline arguments
+if [[ -n "$1" ]]; then
+    for param in $@; do
+        case "$param" in
+            -f|--get-folders)
+                getfolders
+                ;;
+            -a|--get-apps)
+                getapps
+                ;;
+            -r|--get-remaining)
+                getremaining
+                ;;
+            -g|--get)
+                echo -n "Folders: "; getfolders
+                echo; getapps
+                echo "Programs in Activities without folders:"; getremaining
+                ;;
+            -c|--choose-remaining)
+                chooseremaining
+                ;;
+            -s|--set)
+                set
+                ;;
+            -x|--clear)
+                gsettings set org.gnome.desktop.app-folders folder-children "[]"
+                dconf reset -f /org/gnome/desktop/app-folders/folders/
+                ;;
+            -h|--help)
+                help
+                exit 0
+                ;;
+            *)
+                echo -e "Error: Invalid option: ${1}\n"; help
+                exit 1
+                ;;
+        esac
+    done
 else
-    echo -e "Error: please run with a valid command\n"
+    echo -e "Error: run with a valid command as an argument\n"
     help
     exit 1
 fi
