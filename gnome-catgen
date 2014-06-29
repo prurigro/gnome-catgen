@@ -86,7 +86,7 @@ function set() {
         # Add applications from the category if they exist, are set to display and aren't commented
         echo -e "\nEvaluating: ${cat}"
         while read -r application; do
-            if [ $(grep -v -e "^ *#" <<< $application) ]; then
+            if [ $(grep -v -e "^ *#" <<< '$application') ]; then
                 if [[ -f "${LOCALAPPS}/${application}" ]]; then
                     [[ ! $(grep -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}/${application}") ]] \
                         && echo "$application" >> "$TMPFILE" \
