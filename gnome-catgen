@@ -22,13 +22,13 @@ function _getfolders() {
 function getapps() {
     while read -r cat; do
         if [[ ! "$cat" = "@as" ]]; then
-            echo -n "$cat: "
+            echo -n "${cat}: "
             gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps \
                 | grep -v "@as \[\]" || echo
             echo
         fi
     done < <(gsettings get org.gnome.desktop.app-folders folder-children \
-        | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g")
+        | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g;s|\\\\\"|\"|g")
 }
 
 function getremaining() {
