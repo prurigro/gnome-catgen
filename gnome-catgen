@@ -5,7 +5,7 @@ LOCALAPPS="${HOME}/.local/share/applications"
 TMPFILE="/tmp/gnome-catgen.tmp"
 
 CATPATH="${LOCALAPPS}-categories"
-APPNAME=$(grep -o -e "[^\/]*$" <<< $0)
+APPNAME=$(grep -o -e "[^\/]*$" <<< "$0")
 
 # Gets the list of folders based on the dconf configuration
 function getfolders() {
@@ -16,8 +16,7 @@ function getfolders() {
 function _getfolders() {
     for cat in "${CATPATH}"/*.category; do
         [[ -n "$(cat "$cat" | grep -v -e '^ *#')" ]] && echo "$cat"
-    done | grep -oe "[^\/]*\.category$" | sed 's/.category//g' \
-        | sed -e ':a;N;$!ba;'"s/\n/', '/g;s/^/['/g;s/$/']/g"
+    done | grep -oe "[^\/]*\.category$" | sed 's/.category//g'
 }
 
 function getapps() {
@@ -29,7 +28,7 @@ function getapps() {
             echo
         fi
     done < <(gsettings get org.gnome.desktop.app-folders folder-children \
-        | sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g")
+        | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g")
 }
 
 function getremaining() {
@@ -101,28 +100,26 @@ function set() {
 
         # Write the category and its applications if the temp file isn't empty
         if [[ -n "$NOTEMPTY" ]]; then
-            # Add $cat to the dconf categories list if it contained any valid apps
-            CATEGORIES="${CATEGORIES}, '${cat}'"
-
             # Escape any quotes in the folder's category name, then write to dconf
-            [[ $(grep "'" <<< $cat) ]] && cat=$(sed "s|'|\\'|g" <<< $cat)
+            _cat=$(sed "s|'|\\\'|g" <<< "$cat")
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ name "$cat"
+
+            # Add $cat to the dconf categories list if it contained any valid apps
+            CATEGORIES="${CATEGORIES}, '${_cat}'"
 
             # Get the application list and escape any quotes, then write to dconf
             APPLICATIONS=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
-            [[ $(grep -e "'[^,]*'[^,]*'" <<< $APPLICATIONS) ]] \
-                && APPLICATIONS=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< $APPLICATIONS)
+            [[ $(grep -e "'[^,]*'[^,]*'" <<< "$APPLICATIONS") ]] \
+                && APPLICATIONS=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< "$APPLICATIONS")
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps "$APPLICATIONS"
         fi
 
         # Free the empty category marker so the next category has to set it again
         unset NOTEMPTY
-    done < <(sed "s/\[//g;s/\]//g;s/^'//g;s/'$//g;s/',\ *'/\n/g" <<< $_CATEGORIES)
+    done <<< "$_CATEGORIES"
 
     # Finalize the dconf categories list then write to dconf
     CATEGORIES="$(sed 's|\[, |\[|' <<< $CATEGORIES)]"
-    [[ $(grep -e "'[^,]*'[^,]*'" <<< $CATEGORIES) ]] \
-        && CATEGORIES=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< $CATEGORIES)
     gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
 
     # Delete the tempfile
@@ -141,7 +138,8 @@ function chooseremaining() {
     if [ -n "$REMAINING" ]; then
         # Cycle through the output of getremaining
         echo -e "For each application input: a folder name | blank to skip | ctrl-c to quit.\n"
-        _getfolders; echo
+        echo -n "Folder Categories: "
+        _getfolders | sed -e ':a;N;$!ba;'"s/\n/, /g"; echo
         while read -r app; do
             echo -n "$app: "
             read CATNAME </dev/tty
@@ -151,7 +149,7 @@ function chooseremaining() {
             else
                 echo "Skipping ${app}..."
             fi
-        done <<<"$REMAINING"
+        done <<< "$REMAINING"
 
         # Offer to run the set function if changes were made
         if [ -n "$CHANGED" ]; then
@@ -184,9 +182,9 @@ function help() {
     echo -e "${APPNAME} - Gnome 3.12 Folder Category Configuration Tool\n"
     echo -e "Usage: ${APPNAME} option\n"
     echo "Options:"
-    echo -e "    ${APPNAME} -f | --get-folders: list current folders"
-    echo -e "    ${APPNAME} -a | --get-apps: list current apps in each folder"
-    echo -e "    ${APPNAME} -r | --get-remaining: list apps without a folder"
+    echo -e "    ${APPNAME} -f | --get-folders: list active folder categories"
+    echo -e "    ${APPNAME} -a | --get-apps: list apps in each active folder category"
+    echo -e "    ${APPNAME} -r | --get-remaining: list apps without a configured folder category"
     echo -e "    ${APPNAME} -g | --get: list all of the above"
     echo -e "    ${APPNAME} -s | --set: apply current folder configuration"
     echo -e "    ${APPNAME} -x | --clear: remove applied folder configuration"
@@ -211,9 +209,10 @@ if [[ -n "$1" ]]; then
                 getremaining
                 ;;
             -g|--get)
-                echo -n "Folders: "; getfolders
+                echo -n "Active folder categories: "; getfolders
+                echo -n -e "\nApplications in each active folder category:"
                 echo; getapps
-                echo "Programs in Activities without folders:"; getremaining
+                echo "Applications without configured folder categories:"; getremaining
                 ;;
             -c|--choose-remaining)
                 chooseremaining
