@@ -9,14 +9,17 @@ APPNAME=$(grep -o -e "[^\/]*$" <<< "$0")
 
 # Gets the list of folders based on the dconf configuration
 function getfolders() {
-    gsettings get org.gnome.desktop.app-folders folder-children | sed 's|^@as \[\]|None|g'
+    gsettings get org.gnome.desktop.app-folders folder-children \
+        | sed 's|^@as \[\]|None|g' \
+        | sed "s|^\[['\"]||g;s|['\"]\]$||g;s|['\"]\ *,\ *['\"]|,\ |g" \
+        | sed -re "s|\\\([\"\\\])|\1|g"
 }
 
 # Gets the list of folders based on *.category
 function _getfolders() {
     for cat in "${CATPATH}"/*.category; do
         [[ -n "$(cat "$cat" | grep -v -e '^ *#')" ]] && echo "$cat"
-    done | grep -oe "[^\/]*\.category$" | sed 's/.category//g'
+    done | sed 's|^.*\/||g;s/.category$//g'
 }
 
 function getapps() {
@@ -28,7 +31,8 @@ function getapps() {
             echo
         fi
     done < <(gsettings get org.gnome.desktop.app-folders folder-children \
-        | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g;s|\\\\\"|\"|g")
+        | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g" \
+        | sed -re "s|\\\([\"\\\])|\1|g")
 }
 
 function getremaining() {
@@ -38,25 +42,23 @@ function getremaining() {
         && exit 1
 
     # Create a list of all the applications that don't have NoDisplay=true
-    grep -L -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
-        | sed 's|^.*\/||g' | sort -u > "${TMPFILE}"
+    APPLIST=$(grep -L -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
+        | sed 's|^.*\/||g' | sort -u)
 
     # Remove $SYSTEMAPPS that have duplicate $LOCALAPPS that contain NoDisplay=true
-    while read -r program; do
-        sed -i "s|$program||" "${TMPFILE}"
+    while read -r application; do
+        APPLIST=$(sed "s|${application}\ *||" <<< $APPLIST)
     done < <(grep -l -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}"/*.desktop \
         | grep -o -e "[^\/]*$" | sort -u)
 
     # Remove all applications that are defined in gnome-catgen categories
-    for program in $(cat "${CATPATH}"/*.category  | grep -v -e "[^[\ ]*#" | sort -u); do
-        sed -i "s|$program||" "${TMPFILE}"
-    done
+    while read -r application; do
+        [[ $(grep -v -e "^ *#" <<< '$application') ]] \
+            && [[ -n "$application" ]] \
+            && APPLIST="$(sed "s|${application}\ *||" <<< $APPLIST)"
+    done < <(sed 's|\\|\\\\|g' "${CATPATH}"/*.category)
 
-    # Output the results
-    cat "$TMPFILE" | grep ".desktop"
-
-    # Delete the tempfile
-    [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
+    sed 's|\.desktop\ \ *|\.desktop\n|g' <<< "$APPLIST"
 }
 
 function set() {
@@ -100,7 +102,7 @@ function set() {
         # Write the category and its applications if the temp file isn't empty
         if [[ -n "$NOTEMPTY" ]]; then
             # Add $cat to the dconf categories list if it contained any valid apps
-            CATEGORIES="${CATEGORIES}, '$(sed "s|'|\\\'|g" <<< "$cat")'"
+            CATEGORIES="${CATEGORIES}, '$(sed 's|\\|\\\\\\|g'";s|'|\\\'|g" <<< "$cat")'"
 
             # Write the folder category's name to dconf
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ name "$cat"
@@ -144,7 +146,7 @@ function chooseremaining() {
         _getfolders | sed -e ':a;N;$!ba;'"s/\n/, /g"; echo
         while read -r app; do
             echo -n "$app: "
-            read CATNAME </dev/tty
+            read -r CATNAME </dev/tty
             if [ -n "$CATNAME" ]; then
                 CHANGED=1
                 echo "$app" >> "${CATPATH}/${CATNAME}.category"
