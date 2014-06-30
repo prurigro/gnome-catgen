@@ -39,14 +39,13 @@ function getremaining() {
 
     # Create a list of all the applications that don't have NoDisplay=true
     grep -L -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
-        | grep -o -e "[^\/]*$" | sort -u > "${TMPFILE}"
+        | sed 's|^.*\/||g' | sort -u > "${TMPFILE}"
 
     # Remove $SYSTEMAPPS that have duplicate $LOCALAPPS that contain NoDisplay=true
-    for program in \
-        $(grep -l -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}"/*.desktop \
-            | grep -o -e "[^\/]*$" | sort -u); do
-                sed -i "s|$program||" "${TMPFILE}"
-    done
+    while read -r program; do
+        sed -i "s|$program||" "${TMPFILE}"
+    done < <(grep -l -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}"/*.desktop \
+        | grep -o -e "[^\/]*$" | sort -u)
 
     # Remove all applications that are defined in gnome-catgen categories
     for program in $(cat "${CATPATH}"/*.category  | grep -v -e "[^[\ ]*#" | sort -u); do
@@ -100,18 +99,21 @@ function set() {
 
         # Write the category and its applications if the temp file isn't empty
         if [[ -n "$NOTEMPTY" ]]; then
-            # Escape any quotes in the folder's category name, then write to dconf
-            _cat=$(sed "s|'|\\\'|g" <<< "$cat")
+            # Add $cat to the dconf categories list if it contained any valid apps
+            CATEGORIES="${CATEGORIES}, '$(sed "s|'|\\\'|g" <<< "$cat")'"
+
+            # Write the folder category's name to dconf
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ name "$cat"
 
-            # Add $cat to the dconf categories list if it contained any valid apps
-            CATEGORIES="${CATEGORIES}, '${_cat}'"
-
             # Get the application list and escape any quotes, then write to dconf
-            APPLICATIONS=$(sed -e ':a;N;$!ba;'"s/\n/', '/g" "$TMPFILE" | sed "s/^[\"',\ ]*/['/g;s/[\"',\ ]*$/']/g")
-            [[ $(grep -e "'[^,]*'[^,]*'" <<< "$APPLICATIONS") ]] \
-                && APPLICATIONS=$(sed -re "s|'([^,]*)'([^,]*)'|'\1\\\'\2'|g" <<< "$APPLICATIONS")
-            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps "$APPLICATIONS"
+            gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"${cat}"/ apps \
+                "$(while read -r application; do
+                    [[ $(grep "'" <<< "$application") ]] \
+                        && sed 's|"|\\"|g;s|^|"|;s|$|"|' <<< "$application" \
+                        || sed "s|^|'|;s|$|'|" <<< "$application"
+                done < <(sed 's|\\|\\\\\\|g' "$TMPFILE") \
+                    | sed -e ':a;N;$!ba;'"s/\n/, /g" \
+                    | sed 's|^|\[|;s|$|\]|')"
         fi
 
         # Free the empty category marker so the next category has to set it again
@@ -120,7 +122,7 @@ function set() {
 
     # Finalize the dconf categories list then write to dconf
     CATEGORIES="$(sed 's|\[, |\[|' <<< $CATEGORIES)]"
-    gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
+    [[ $(grep -v "\[\]" <<< "$CATEGORIES") ]] && gsettings set org.gnome.desktop.app-folders folder-children "$CATEGORIES"
 
     # Delete the tempfile
     [[ -f "$TMPFILE" ]] && rm "$TMPFILE"
