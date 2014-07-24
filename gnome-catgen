@@ -41,15 +41,15 @@ function getremaining() {
         && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
         && exit 1
 
-    # Create a list of all the applications that don't have NoDisplay=true
-    APPLIST=$(grep -L -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
+    # Create a list of all the applications that don't have NoDisplay=true or Hidden=true
+    APPLIST=$(grep -L -i -E "(nodisplay|hidden)\ *=\ *true" "${SYSTEMAPPS}"/*.desktop "${LOCALAPPS}"/*.desktop \
         | sed 's|^.*\/||g' \
         | sort -u)
 
-    # Remove $SYSTEMAPPS that have duplicate $LOCALAPPS that contain NoDisplay=true
+    # Remove $SYSTEMAPPS with duplicates in $LOCALAPPS that contain NoDisplay=true or Hidden=true
     while read -r application; do
         APPLIST=$(sed "s|${application}\ *||" <<< $APPLIST)
-    done < <(grep -l -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}"/*.desktop \
+    done < <(grep -l -i -E "(nodisplay|hidden)\ *=\ *true" "${LOCALAPPS}"/*.desktop \
         | grep -o -e "[^\/]*$" | sort -u)
 
     # Remove all applications that are defined in gnome-catgen categories
@@ -89,13 +89,13 @@ function set() {
         while read -r application; do
             if [ $(grep -v -e "^ *#" <<< '$application') ]; then
                 if [[ -f "${LOCALAPPS}/${application}" ]]; then
-                    if [[ ! $(grep -i -e "nodisplay\ *=\ *true" "${LOCALAPPS}/${application}") ]]; then
+                    if [[ ! $(grep -i -E "(nodisplay|hidden)\ *=\ *true" "${LOCALAPPS}/${application}") ]]; then
                         [[ -n "$NOTEMPTY" ]] && application=$(echo -e "\n$application")
                         APPLIST=${APPLIST}${application}
                         NOTEMPTY=1
                     fi
                 elif [[ -f "${SYSTEMAPPS}/${application}" ]]; then
-                    if [[ ! $(grep -i -e "nodisplay\ *=\ *true" "${SYSTEMAPPS}/${application}") ]]; then
+                    if [[ ! $(grep -i -E "(nodisplay|hidden)\ *=\ *true" "${SYSTEMAPPS}/${application}") ]]; then
                         [[ -n "$NOTEMPTY" ]] && application=$(echo -e "\n$application")
                         APPLIST=${APPLIST}${application}
                         NOTEMPTY=1
