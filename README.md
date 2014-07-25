@@ -22,9 +22,9 @@ To configure the folder category for each application, (if necessary) create and
 
 1. In here, create files with the `.category` extension and the name of the category they will represent.
 2. Inside `.category` files, one application's .desktop filename can be added to each line, to add the application to that folder category.
-3. Once everything is configured how you'd like it, run: `gnome-catgen set` to apply your configuration.
+3. Once everything is configured how you'd like it, run: `gnome-catgen -s` to apply your configuration.
 
-### Editing Category Files ###
+#### Notes on Category Files ####
 
 * Blank lines are ignored.
 * Lines where the first non-whitespace character is a # considered commented and are ignored.
