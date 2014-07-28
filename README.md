@@ -55,6 +55,11 @@ Written by Kevin MacMartin:
 * [GitHub Projects](https://github.com/prurigro)
 * [Arch Linux AUR Packages](https://aur.archlinux.org/packages/?SeB=m&K=prurigro)
 
+### Contributors ###
+
+* Florian Rommel ([utivis](https://github.com/utivis))
+* Martin Lukeš ([meridius](https://github.com/meridius))
+
 ## LICENSE ##
 
 Licensed under the [MIT license](http://opensource.org/licenses/MIT).

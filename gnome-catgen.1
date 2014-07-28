@@ -1,8 +1,14 @@
 .
-.TH "GNOME\-CATGEN" "" "June 2014" "" "gnome\-catgen"
+.TH GNOME\-CATGEN 1 \*(Dt "gnome-catgen (git)" "User Commands"
+.hy 0
+.
+.SH "NAME"
+\fBgnome-catgen\fR
+.
+.SH "DESCRIPTION"
 A Gnome 3\.12 Folder Category Configuration Tool
 .
-.SH "Configuration"
+.SH "CONFIGURATION"
 .
 .SS "Interactive Category Selection"
 While configuration is primarily done by hand, running \fBgnome\-catgen \-c\fR or \fBgnome\-catgen \-\-choose\-remaining\fR will begin iterating through the list of applications that aren\'t currently in a folder and let you choose where you would like them to go\.
@@ -19,8 +25,6 @@ Enter a blank line to skip the current application\.
 .IP "\(bu" 4
 Press ctrl\-c to quit at any time\.
 .
-.IP "" 0
-.
 .P
 Once all the applications without a folder have been cycled through, \fBgnome\-catgen\fR will offer the option of applying the changes you just made to your config\. If you choose not to apply the changes at this point, you can do so later by running: \fBgnome\-catgen \-s\fR\.
 .
@@ -36,8 +40,6 @@ Inside \fB\.category\fR files, one application\'s \.desktop filename can be adde
 .IP "3." 4
 Once everything is configured how you\'d like it, run: \fBgnome\-catgen \-s\fR to apply your configuration\.
 .
-.IP "" 0
-.
 .SS "Notes on Category Files"
 .
 .IP "\(bu" 4
@@ -46,9 +48,7 @@ Blank lines are ignored\.
 .IP "\(bu" 4
 Lines where the first non\-whitespace character is a # considered commented and are ignored\.
 .
-.IP "" 0
-.
-.SH "Commands"
+.SH "COMMANDS"
 .
 .SS "Read"
 .
@@ -76,8 +76,6 @@ List all of the above
 .RE
 .PP
 .
-.IP "" 0
-.
 .SS "Write"
 .
 \fBgnome\-catgen \-s\fR | \fB\-\-set\fR
@@ -98,8 +96,6 @@ Interactively assign folders to apps without
 .RE
 .PP
 .
-.IP "" 0
-.
 .SS "Info"
 .
 \fBgnome\-catgen \-h\fR | \fB\-\-help\fR
@@ -107,8 +103,6 @@ Interactively assign folders to apps without
 Display the list of commands.
 .RE
 .PP
-.
-.IP "" 0
 .
 .SH "CREDITS"
 Written by Kevin MacMartin:
@@ -119,7 +113,11 @@ GitHub Projects \fIhttps://github\.com/prurigro\fR
 .IP "\(bu" 4
 Arch Linux AUR Packages \fIhttps://aur\.archlinux\.org/packages/?SeB=m&K=prurigro\fR
 .
-.IP "" 0
+.SS "CONTRIBUTORS"
+.
+Florian Rommel (utivis)
+.P
+Martin Lukeš (meridius)
 .
 .SH "LICENSE"
 Licensed under the MIT license \fIhttp://opensource\.org/licenses/MIT\fR\.
