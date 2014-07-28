@@ -1,18 +1,46 @@
-.
+.if !\n(.g \{\
+.	if !\w|\*(lq| \{\
+.		ds lq ``
+.		if \w'\(lq' .ds lq "\(lq
+.	\}
+.	if !\w|\*(rq| \{\
+.		ds rq ''
+.		if \w'\(rq' .ds rq "\(rq
+.	\}
+.\}
+.ie t .ds Tx \s-1T\v'.4n'\h'-.1667'E\v'-.4n'\h'-.125'X\s0
+. el  .ds Tx TeX
+.de Id
+. ds Yr \\$4
+. substring Yr 0 3
+. ds Mn \\$4
+. substring Mn 5 6
+. ds Dy \\$4
+. substring Dy 8 9
+. \" ISO 8601 date, complete format, extended representation
+. ds Dt \\*(Yr-\\*(Mn-\\*(Dy
+..
 .TH GNOME\-CATGEN 1 \*(Dt "gnome-catgen (git)" "User Commands"
 .hy 0
 .
 .SH "NAME"
-\fBgnome-catgen\fR
+.B gnome\-catgen
+\- a gnome 3\.12 folder category configuration tool
 .
-.SH "DESCRIPTION"
-A Gnome 3\.12 Folder Category Configuration Tool
+.SH "SYNOPSIS"
+.
+.B gnome\-catgen
+.RI [COMMAND]
+.
+.P
+.B gnome\-catgen
+.RI [COMMAND]
+.RB {CAT}
 .
 .SH "CONFIGURATION"
 .
 .SS "Interactive Category Selection"
-While configuration is primarily done by hand, running \fBgnome\-catgen \-c\fR or \fBgnome\-catgen \-\-choose\-remaining\fR will begin iterating through the list of applications that aren\'t currently in a folder and let you choose where you would like them to go\.
-.
+While configuration is done primarily by hand, it\'s possible to iterate through the list of applications that aren\'t already in a folder category and select a category for each by running: \fB\'gnome\-catgen \-c\'\fR
 .P
 In this mode you can do the following:
 .
@@ -26,19 +54,12 @@ Enter a blank line to skip the current application\.
 Press ctrl\-c to quit at any time\.
 .
 .P
-Once all the applications without a folder have been cycled through, \fBgnome\-catgen\fR will offer the option of applying the changes you just made to your config\. If you choose not to apply the changes at this point, you can do so later by running: \fBgnome\-catgen \-s\fR\.
+Once all the applications without a folder have been cycled through, \fBgnome\-catgen\fR will offer to apply the updated configuration\. Choosing not to apply the changes at this time will simply exit the program, and the changes can then be applied later by running: \fBgnome\-catgen \-s\fR\.
 .
 .SS "Configure Category Files"
-To configure the folder category for each application, (if necessary) create and browse to: \fB~/\.local/share/applications\-categories\fR
-.
-.IP "1." 4
-In here, create files with the \fB\.category\fR extension and the name of the category they will represent\.
-.
-.IP "2." 4
-Inside \fB\.category\fR files, one application\'s \.desktop filename can be added to each line, to add the application to that folder category\.
-.
-.IP "3." 4
-Once everything is configured how you\'d like it, run: \fBgnome\-catgen \-s\fR to apply your configuration\.
+You can manually configure a given folder category by running: gnome-catgen \-e "Category Name"
+.P
+This will create (if it doesn't already exist) and open (with the editor set by \fB$EDITOR\fR\, or \fBvi\fR if nothing is set) the \fB\'\.category\'\fR file in \fB\'~/\.local/share/applications\-categories\'\fR for the provided category name. In this file, you can now add one application\'s \fB\'\.desktop\'\fR filename per line\. After all the desired applications have been added, you can then run: \fBgnome\-catgen \-s\fR to apply your configuration\.
 .
 .SS "Notes on Category Files"
 .
@@ -51,58 +72,41 @@ Lines where the first non\-whitespace character is a # considered commented and 
 .SH "COMMANDS"
 .
 .SS "Read"
-.
-\fBgnome\-catgen \-f\fR | \fB\-\-get\-folders\fR
-.RS 4
+.TP
+.BR \-f ", " \-\^\-get\-folders
 List current folders
-.RE
-.PP
-
-\fBgnome\-catgen \-a\fR | \fB\-\-get\-apps\fR
-.RS 4
+.TP
+.TP
+.BR \-a ", " \-\^\-get\-apps
 List current apps in each folder
-.RE
-.PP
-
-\fBgnome\-catgen \-r\fR | \fB\-\-get\-remaining\fR
-.RS 4
+.TP
+.TP
+.BR \-r ", " \-\^\-get\-remaining
 List apps without a folder
-.RE
-.PP
-
-\fBgnome\-catgen \-g\fR | \fB\-\-get\fR
-.RS 4
+.TP
+.TP
+.BR \-g ", " \-\^\- get
 List all of the above
-.RE
-.PP
-.
-.SS "Write"
-.
-\fBgnome\-catgen \-s\fR | \fB\-\-set\fR
-.RS 4
-Apply current folder configuration
-.RE
-.PP
-
-\fBgnome\-catgen \-x\fR | \fB\-\-clear\fR
-.RS 4
-Remove applied folder configuration
-.RE
-.PP
-
-\fBgnome\-catgen \-c\fR | \fB\-\-choose\-remaining\fR
-.RS 4
+.SS "Edit"
+.TP
+.BR \-c ", " \-\^\-choose\-remaining
 Interactively assign folders to apps without
-.RE
-.PP
-.
-.SS "Info"
-.
-\fBgnome\-catgen \-h\fR | \fB\-\-help\fR
-.RS 4
+.TP
+.TP
+.BR \-e " {CAT}, " \-\^\-edit\-category " {CAT}"
+edit the .category file of the folder category for {CAT}.
+.SS "Write"
+.TP
+.BR \-s ", " \-\^\-set
+Apply current folder configuration
+.TP
+.TP
+.BR \-x ", " \-\^\-clear
+Remove applied folder configuration
+.SS "Information"
+.TP
+.BR \-h ", " \-\^\-help
 Display the list of commands.
-.RE
-.PP
 .
 .SH "CREDITS"
 Written by Kevin MacMartin:

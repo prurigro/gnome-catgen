@@ -6,6 +6,8 @@ LOCALAPPS="${HOME}/.local/share/applications"
 CATPATH="${LOCALAPPS}-categories"
 APPNAME=$(grep -o -e "[^\/]*$" <<< "$0")
 
+[[ -z "$EDITOR" ]] && EDITOR=vi
+
 # Gets the list of folders based on the dconf configuration
 function getfolders() {
     gsettings get org.gnome.desktop.app-folders folder-children \
@@ -179,59 +181,77 @@ function chooseremaining() {
     fi
 }
 
-function help() {
-    # Fail if the config directory is read only or doesn't exist
-    [[ ! -w "$CATPATH" ]] \
-        && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
-        && exit 1
+function editcategory() {
+    if [[ -n "$1" ]]; then
+        echo "Editing ${1}..."
+        "$EDITOR" "${CATPATH}/${1}.category"
+    else
+        echo -e "Error: run with a category name as an argument\n"
+        help
+        exit 1
+    fi
+}
 
+function help() {
     # Display help information
     echo -e "${APPNAME} - Gnome 3.12 Folder Category Configuration Tool\n"
-    echo -e "Usage: ${APPNAME} option\n"
-    echo "Options:"
-    echo -e "    ${APPNAME} -f | --get-folders: list active folder categories"
-    echo -e "    ${APPNAME} -a | --get-apps: list apps in each active folder category"
-    echo -e "    ${APPNAME} -r | --get-remaining: list apps without a configured folder category"
-    echo -e "    ${APPNAME} -g | --get: list all of the above"
-    echo -e "    ${APPNAME} -s | --set: apply current folder configuration"
-    echo -e "    ${APPNAME} -x | --clear: remove applied folder configuration"
-    echo -e "    ${APPNAME} -c | --choose-remaining: interactively assign folders to apps without"
-    echo -e "    ${APPNAME} -h | --help: display this help"
+    echo -e "SYNOPSIS:\n  ${APPNAME} [COMMAND]\n  ${APPNAME} [COMMAND] {CAT}\n"
+    echo -e "COMMANDS:\n  READ:"
+    echo -e "    ${APPNAME} [-f |or| --get-folders]: list active folders"
+    echo -e "    ${APPNAME} [-a |or| --get-apps]: list apps in each active folders"
+    echo -e "    ${APPNAME} [-r |or| --get-remaining]: list apps without a folder"
+    echo -e "    ${APPNAME} [-g |or| --get]: list all of the above\n"
+    echo "  EDIT:"
+    echo -e "    ${APPNAME} [-c |or| --choose-remaining]: assign folders to unassigned apps"
+    echo -e "    ${APPNAME} [-e |or| --edit-category] {cat}: edit the .category for {cat}\n"
+    echo "  WRITE:"
+    echo -e "    ${APPNAME} [-s |or| --set]: apply current folder configuration"
+    echo -e "    ${APPNAME} [-x |or| --clear]: remove applied folder configuration\n"
+    echo "  INFORMATION:"
+    echo -e "    ${APPNAME} [-h |or| --help]: display this help"
 }
 
 # Install the gnome-catgen config folder if it doesn't exist
 [[ -d "$CATPATH" ]] || install -d "$CATPATH"
 
+# Fail if the config directory is read only or doesn't exist
+[[ ! -w "$CATPATH" ]] \
+    && echo "Error: Config folder '$CATPATH' either doesn't exist or isn't writable" \
+    && exit 1
+
 # Parse commandline arguments
 if [[ -n "$1" ]]; then
     for param in $@; do
         case "$param" in
-            -f|--get-folders)
+            f|-f|--get-folders)
                 getfolders
                 ;;
-            -a|--get-apps)
+            a|-a|--get-apps)
                 getapps
                 ;;
-            -r|--get-remaining)
+            r|-r|--get-remaining)
                 getremaining
                 ;;
-            -g|--get)
+            g|-g|--get)
                 echo -n "Active folder categories: "; getfolders
                 echo -n -e "\nApplications in each active folder category:"
                 echo; getapps
                 echo "Applications without configured folder categories:"; getremaining
                 ;;
-            -c|--choose-remaining)
+            c|-c|--choose-remaining)
                 chooseremaining
                 ;;
-            -s|--set)
+            e|-e|--edit-category)
+                editcategory "$2"
+                ;;
+            s|-s|--set)
                 set
                 ;;
-            -x|--clear)
+            x|-x|--clear)
                 gsettings set org.gnome.desktop.app-folders folder-children "[]"
                 dconf reset -f /org/gnome/desktop/app-folders/folders/
                 ;;
-            -h|--help)
+            h|-h|--help)
                 help
                 exit 0
                 ;;

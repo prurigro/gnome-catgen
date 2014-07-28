@@ -17,7 +17,7 @@ The following environment variables can be set to configure the location of vari
 
 ### Interactive Category Selection ###
 
-While configuration is primarily done by hand, running `gnome-catgen -c` or `gnome-catgen --choose-remaining` will begin iterating through the list of applications that aren't currently in a folder and let you choose where you would like them to go.
+While configuration is done primarily by hand, it's possible to iterate through the list of applications that aren't already in a folder category and select a category for each by running: 'gnome-catgen -c'
 
 In this mode you can do the following:
 
@@ -25,15 +25,14 @@ In this mode you can do the following:
 * Enter a blank line to skip the current application.
 * Press ctrl-c to quit at any time.
 
-Once all the applications without a folder have been cycled through, **gnome-catgen** will offer the option of applying the changes you just made to your config. If you choose not to apply the changes at this point, you can do so later by running: `gnome-catgen -s`.
+Once all the applications without a folder have been cycled through, gnome-catgen will offer to apply the updated configuration. Choosing not to apply the changes at this time will simply exit the program, and the changes can then be applied later by running: gnome-catgen -s.
 
 ### Configure Category Files ###
 
-To configure the folder category for each application, (if necessary) create and browse to: `~/.local/share/applications-categories`
+You can manually configure a given folder category by running: gnome-catgen -e "Category Name"
 
-1. In here, create files with the `.category` extension and the name of the category they will represent.
-2. Inside `.category` files, one application's .desktop filename can be added to each line, to add the application to that folder category.
-3. Once everything is configured how you'd like it, run: `gnome-catgen -s` to apply your configuration.
+
+This will create (if it doesn't already exist) and open (with the editor set by **$EDITOR**, or **vi** if nothing is set) the '.category' file in '~/.local/share/applications-categories' for the provided category name. In this file, you can now add one application's '.desktop' filename per line. After all the desired applications have been added, you can then run: gnome-catgen -s to apply your configuration.
 
 #### Notes on Category Files ####
 
@@ -45,17 +44,21 @@ To configure the folder category for each application, (if necessary) create and
 ### Read ###
 
 * `gnome-catgen -f` | `--get-folders`: list current folders
-* `gnome-catgen -a` | `--get-apps`: list current apps in each folder
-* `gnome-catgen -r` | `--get-remaining`: list apps without a folder
+* `gnome-catgen -a` | `--get-apps`: list current apps in each folder category
+* `gnome-catgen -r` | `--get-remaining`: list apps without a folder category
 * `gnome-catgen -g` | `--get`: list all of the above
+
+### Edit ###
+
+* `gnome-catgen -c` | `--choose-remaining`: assign folder categories to unassigned apps
+* `gnome-catgen -e {CAT}` | `--edit-category {CAT}`: edit the _.category_ file of the folder category for **{CAT}**.
 
 ### Write ###
 
 * `gnome-catgen -s` | `--set`: apply current folder configuration
 * `gnome-catgen -x` | `--clear`: remove applied folder configuration
-* `gnome-catgen -c` | `--choose-remaining`: interactively assign folders to apps without
 
-### Info ###
+### Information ###
 
 * `gnome-catgen -h` | `--help`: display this help
 
