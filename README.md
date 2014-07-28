@@ -2,6 +2,17 @@
 
 A Gnome 3.12 Folder Category Configuration Tool
 
+## Installation ##
+
+The package can be installed by running the command: `make install`, and can later be removed with: `make uninstall`.
+
+The following environment variables can be set to configure the location of various things:
+
+* `$DESTDIR`: The base under root (default: **/**)
+* `$PREFIX`: The prefix that will be used under other folders (default: **/usr**)
+* `$MANDIR`: The folder (starting at **$PREFIX**) to install the man page.
+* `$VIMDIR`: The folder (starting at **$PREFIX**) to install the Vim filetype config.
+
 ## Configuration ##
 
 ### Interactive Category Selection ###
