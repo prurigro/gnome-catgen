@@ -31,7 +31,6 @@ Once all the applications without a folder have been cycled through, gnome-catge
 
 You can manually configure a given folder category by running: gnome-catgen -e "Category Name"
 
-
 This will create (if it doesn't already exist) and open (with the editor set by **$EDITOR**, or **vi** if nothing is set) the '.category' file in '~/.local/share/applications-categories' for the provided category name. In this file, you can now add one application's '.desktop' filename per line. After all the desired applications have been added, you can then run: gnome-catgen -s to apply your configuration.
 
 #### Notes on Category Files ####
