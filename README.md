@@ -1,6 +1,6 @@
 # gnome-catgen #
 
-A Gnome 3.12 Folder Category Configuration Tool
+A Gnome 3.12 and 3.14 Folder Category Configuration Tool
 
 ## Installation ##
 
@@ -31,7 +31,7 @@ Once all the applications without a folder have been cycled through, gnome-catge
 
 You can manually configure a given folder category by running: gnome-catgen -e "Category Name"
 
-This will create (if it doesn't already exist) and open (with the editor set by **$EDITOR**, or **vi** if nothing is set) the '.category' file in '~/.local/share/applications-categories' for the provided category name. In this file, you can now add one application's '.desktop' filename per line. After all the desired applications have been added, you can then run: gnome-catgen -s to apply your configuration.
+This will create (if it doesn't already exist) and open (with the editor set by **$EDITOR**, or **vi** if nothing is set) the **.category** file in **~/.local/share/applications-categories** for the provided category name. In this file, you can now add one application's '.desktop' filename per line. After all the desired applications have been added, you can then run: gnome-catgen -s to apply your configuration.
 
 #### Notes on Category Files ####
 
@@ -61,6 +61,11 @@ This will create (if it doesn't already exist) and open (with the editor set by 
 
 * `gnome-catgen -h` | `--help`: display this help
 
+## Notes ##
+
+* If there are still uncategorized apps and `gnome-catgen -c` doesn't list them, there may be something unexpected in **~/.local/share/applications-categories**, and an easy fix is to delete/backup and start again.
+* It may be necessary to delete/backup **~/.local/share/applications-categories** when upgrading from Gnome **3.12** to **3.14** for reasons related to the note above.
+
 ## CREDITS ##
 
 Written by Kevin MacMartin:
@@ -75,4 +80,4 @@ Written by Kevin MacMartin:
 
 ## LICENSE ##
 
-Licensed under the [MIT license](http://opensource.org/licenses/MIT).
+Released under the [MIT license](http://opensource.org/licenses/MIT).
