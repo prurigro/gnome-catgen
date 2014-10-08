@@ -25,7 +25,7 @@
 .
 .SH "NAME"
 .B gnome\-catgen
-\- a gnome 3\.12 folder category configuration tool
+\- a gnome 3\.12 and 3\.14 folder category configuration tool
 .
 .SH "SYNOPSIS"
 .
@@ -44,13 +44,13 @@ While configuration is done primarily by hand, it\'s possible to iterate through
 .P
 In this mode you can do the following:
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Enter the name of a folder category to add the current application\.
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Enter a blank line to skip the current application\.
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Press ctrl\-c to quit at any time\.
 .
 .P
@@ -63,10 +63,10 @@ This will create (if it doesn't already exist) and open (with the editor set by 
 .
 .SS "Notes on Category Files"
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Blank lines are ignored\.
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Lines where the first non\-whitespace character is a # considered commented and are ignored\.
 .
 .SH "COMMANDS"
@@ -108,13 +108,21 @@ Remove applied folder configuration
 .BR \-h ", " \-\^\-help
 Display the list of commands.
 .
+.SH "GENERAL NOTES"
+.TP
+.IP "\(bu" 2
+If there are still uncategorized apps and gnome-catgen -c doesn't list them, there may be something unexpected in ~/.local/share/applications-categories, and an easy fix is to delete/backup and start again.
+.
+.IP "\(bu" 2
+It may be necessary to delete/backup ~/.local/share/applications-categories when upgrading from Gnome 3.12 to 3.14 for reasons related to the note above.
+.
 .SH "CREDITS"
 Written by Kevin MacMartin:
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 GitHub Projects \fIhttps://github\.com/prurigro\fR
 .
-.IP "\(bu" 4
+.IP "\(bu" 2
 Arch Linux AUR Packages \fIhttps://aur\.archlinux\.org/packages/?SeB=m&K=prurigro\fR
 .
 .SS "CONTRIBUTORS"
