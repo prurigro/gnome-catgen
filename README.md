@@ -61,7 +61,7 @@ This will create (if it doesn't already exist) and open (with the editor set by 
 
 * `gnome-catgen -h` | `--help`: display this help
 
-## Notes ##
+## General Notes ##
 
 * If there are still uncategorized apps and `gnome-catgen -c` doesn't list them, there may be something unexpected in **~/.local/share/applications-categories**, and an easy fix is to delete/backup and start again.
 * It may be necessary to delete/backup **~/.local/share/applications-categories** when upgrading from Gnome **3.12** to **3.14** for reasons related to the note above.
