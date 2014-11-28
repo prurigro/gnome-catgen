@@ -194,21 +194,21 @@ function editcategory() {
 
 function help() {
     # Display help information
-    echo -e "${APPNAME} - Gnome 3.12 Folder Category Configuration Tool\n"
-    echo -e "SYNOPSIS:\n  ${APPNAME} [COMMAND]\n  ${APPNAME} [COMMAND] {CAT}\n"
+    echo -e "${APPNAME} - Gnome 3 Folder Category Configuration Tool\n"
+    echo -e "SYNOPSIS: ${APPNAME} [COMMAND] [CAT]\n"
     echo -e "COMMANDS:\n  READ:"
-    echo -e "    ${APPNAME} [-f |or| --get-folders]: list active folders"
-    echo -e "    ${APPNAME} [-a |or| --get-apps]: list apps in each active folders"
-    echo -e "    ${APPNAME} [-r |or| --get-remaining]: list apps without a folder"
-    echo -e "    ${APPNAME} [-g |or| --get]: list all of the above\n"
+    echo -e "    -f\e[1;30m|\e[0m--get-folders         : list active folders"
+    echo -e "    -a\e[1;30m|\e[0m--get-apps            : list apps in each active folders"
+    echo -e "    -r\e[1;30m|\e[0m--get-remaining       : list apps without a folder"
+    echo -e "    -g\e[1;30m|\e[0m--get                 : list all of the above\n"
     echo "  EDIT:"
-    echo -e "    ${APPNAME} [-c |or| --choose-remaining]: assign folders to unassigned apps"
-    echo -e "    ${APPNAME} [-e |or| --edit-category] {cat}: edit the .category for {cat}\n"
+    echo -e "    -c\e[1;30m|\e[0m--choose-remaining    : assign folders to unassigned apps"
+    echo -e "    -e\e[1;30m|\e[0m--edit-category [CAT] : edit the .category file for CAT\n"
     echo "  WRITE:"
-    echo -e "    ${APPNAME} [-s |or| --set]: apply current folder configuration"
-    echo -e "    ${APPNAME} [-x |or| --clear]: remove applied folder configuration\n"
+    echo -e "    -s\e[1;30m|\e[0m--set                 : apply current folder configuration"
+    echo -e "    -x\e[1;30m|\e[0m--clear               : remove applied folder configuration\n"
     echo "  INFORMATION:"
-    echo -e "    ${APPNAME} [-h |or| --help]: display this help"
+    echo -e "    -h\e[1;30m|\e[0m--help                : display this help"
 }
 
 # Install the gnome-catgen config folder if it doesn't exist
