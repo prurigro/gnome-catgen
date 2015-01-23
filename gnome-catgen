@@ -117,7 +117,7 @@ function getapps() {
 function getremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$CATPATH" ]] && {
-        echo -e "\n${_C_RED}ERROR${_CLEAR}: Config folder '$CATPATH' either doesn't exist or isn't writable"
+        echo -e "\n${_C_RED}ERROR$_CLEAR: Config folder '$CATPATH' either doesn't exist or isn't writable"
         exit 1
     }
 
@@ -147,7 +147,7 @@ function getremaining() {
 function set() {
     # Fail if the config directory doesn't exist, otherwise announce initiation
     [[ ! -d "$CATPATH" ]] && {
-        echo -e "\n${_C_RED}ERROR${_CLEAR}: config folder '$CATPATH' either doesn't exist or isn't readable"
+        echo -e "\n${_C_RED}ERROR$_CLEAR: config folder '$CATPATH' either doesn't exist or isn't readable"
         exit 1
     }
     echo -e "\n${_C_WHITE}Applying current folder configuration...$_CLEAR\n"
@@ -222,7 +222,7 @@ function set() {
 function chooseremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$CATPATH" ]] && {
-        echo -e "\n${_C_RED}ERROR${_CLEAR}: config folder '$CATPATH' either doesn't exist or isn't writable"
+        echo -e "\n${_C_RED}ERROR$_CLEAR: config folder '$CATPATH' either doesn't exist or isn't writable"
         exit 1
     }
 
@@ -233,7 +233,7 @@ function chooseremaining() {
         echo -ne "\n${_C_WHITE}Folder Categories:\n  "
         getfolders
         echo
-        echo -e "${_C_WHITE}Enter:\n  ${_C_RED}Category name ${_C_GREY}| ${_C_RED}Blank to skip ${_C_GREY}| ${_C_RED}Ctrl-c to quit$_CLEAR\n"
+        echo -e "${_C_WHITE}Enter:\n  ${_C_RED}Category name $_C_GREY| ${_C_RED}Blank to skip $_C_GREY| ${_C_RED}Ctrl-c to quit$_CLEAR\n"
         while read -r app; do
             eval echo -ne "$(sed 's|^|\${_C_WHITE}|;s|\.desktop|\${_C_GREY}\.desktop\${_CLEAR}|' <<< "$app")"'${_C_WHITE}:${_CLEAR}\ '
             read -r CATNAME </dev/tty
@@ -248,7 +248,7 @@ function chooseremaining() {
         # Offer to run the set function if changes were made
         if [ -n "$CHANGED" ]; then
             while [ 0 ]; do
-                echo -en "\n${_C_WHITE}Update configured folder categories in Gnome? [${_C_GREEN}Y${_C_WHITE}/${_C_RED}N${_C_WHITE}]:$_CLEAR "
+                echo -en "\n${_C_WHITE}Update configured folder categories in Gnome? [${_C_GREEN}Y$_C_WHITE/${_C_RED}N$_C_WHITE]:$_CLEAR "
                 read SET
                 case $SET in
                     y|Y)
@@ -259,7 +259,7 @@ function chooseremaining() {
                         break
                         ;;
                     *)
-                        echo -e "\n${_C_RED}ERROR${_CLEAR}: Invalid option"
+                        echo -e "\n${_C_RED}ERROR$_CLEAR: Invalid option"
                         ;;
                 esac
             done
@@ -276,7 +276,7 @@ function editcategory() {
         echo "Editing ${1}..."
         "$EDITOR" "$CATPATH/${1}.category"
     else
-        echo -e "\n${_C_RED}ERROR${_CLEAR}: run with a category name as an argument"
+        echo -e "\n${_C_RED}ERROR$_CLEAR: run with a category name as an argument"
         help
         exit 1
     fi
@@ -285,19 +285,19 @@ function editcategory() {
 function help() {
     # Display help information
     echo -e "\n$_C_WHITE$APPNAME$_CLEAR: Gnome 3 Folder Category Configuration Tool\n"
-    echo -e "${_C_BLUE}SYNOPSIS$_CLEAR\n  $_C_YELLOW$APPNAME$_CLEAR [${_C_MAGENTA}COMMAND${_CLEAR}] [${_C_MAGENTA}CAT${_CLEAR}]\n"
+    echo -e "${_C_BLUE}SYNOPSIS$_CLEAR\n  $_C_YELLOW$APPNAME$_CLEAR [${_C_MAGENTA}COMMAND$_CLEAR] [${_C_MAGENTA}CAT$_CLEAR]\n"
     echo -e "${_C_BLUE}COMMANDS$_CLEAR\n  ${_C_RED}READ$_CLEAR"
-    echo -e "    ${_C_WHITE}-f${_C_GREY}|${_C_WHITE}--get-folders${_CLEAR}          list active folders"
-    echo -e "    ${_C_WHITE}-a${_C_GREY}|${_C_WHITE}--get-apps${_CLEAR}             list apps in each active folders"
-    echo -e "    ${_C_WHITE}-r${_C_GREY}|${_C_WHITE}--get-remaining${_CLEAR}        list apps without a folder\n"
+    echo -e "    $_C_WHITE-f$_C_GREY|$_C_WHITE--get-folders$_CLEAR          list active folders"
+    echo -e "    $_C_WHITE-a$_C_GREY|$_C_WHITE--get-apps$_CLEAR             list apps in each active folders"
+    echo -e "    $_C_WHITE-r$_C_GREY|$_C_WHITE--get-remaining$_CLEAR        list apps without a folder\n"
     echo -e "  ${_C_RED}EDIT$_CLEAR"
-    echo -e "    ${_C_WHITE}-c${_C_GREY}|${_C_WHITE}--choose-remaining${_CLEAR}     assign folders to unassigned apps"
-    echo -e "    ${_C_WHITE}-e${_C_GREY}|${_C_WHITE}--edit-category${_CLEAR} [${_C_MAGENTA}CAT${_CLEAR}]  edit the .category file for CAT\n"
+    echo -e "    $_C_WHITE-c$_C_GREY|$_C_WHITE--choose-remaining$_CLEAR     assign folders to unassigned apps"
+    echo -e "    $_C_WHITE-e$_C_GREY|$_C_WHITE--edit-category$_CLEAR [${_C_MAGENTA}CAT$_CLEAR]  edit the .category file for CAT\n"
     echo -e "  ${_C_RED}WRITE$_CLEAR"
-    echo -e "    ${_C_WHITE}-s${_C_GREY}|${_C_WHITE}--set${_CLEAR}                  apply current folder configuration"
-    echo -e "    ${_C_WHITE}-x${_C_GREY}|${_C_WHITE}--clear${_CLEAR}                remove applied folder configuration\n"
+    echo -e "    $_C_WHITE-s$_C_GREY|$_C_WHITE--set$_CLEAR                  apply current folder configuration"
+    echo -e "    $_C_WHITE-x$_C_GREY|$_C_WHITE--clear$_CLEAR                remove applied folder configuration\n"
     echo -e "  ${_C_RED}INFORMATION$_CLEAR"
-    echo -e "    ${_C_WHITE}-h${_C_GREY}|${_C_WHITE}--help${_CLEAR}                 display this help"
+    echo -e "    $_C_WHITE-h$_C_GREY|$_C_WHITE--help$_CLEAR                 display this help\n"
 }
 
 # Install the gnome-catgen config folder if it doesn't exist
@@ -306,7 +306,7 @@ function help() {
 
 # Fail if the config directory is read only or doesn't exist
 [[ ! -w "$CATPATH" ]] && {
-    echo -e "\n${_C_RED}ERROR${_CLEAR}: the config folder @ $CATPATH doesn't exist or can't be written to"
+    echo -e "\n${_C_RED}ERROR$_CLEAR: the config folder @ $CATPATH doesn't exist or can't be written to"
     exit 1
 }
 
@@ -316,39 +316,46 @@ if [[ -n "$1" ]]; then
         case "$param" in
             f|-f|--get-folders)
                 getfolders
+                exit 0
                 ;;
             a|-a|--get-apps)
                 getapps
+                exit 0
                 ;;
             r|-r|--get-remaining)
                 list_apps $(getremaining)
+                exit 0
                 ;;
             c|-c|--choose-remaining)
                 chooseremaining
+                exit 0
                 ;;
             e|-e|--edit-category)
                 editcategory "$2"
+                exit 0
                 ;;
             s|-s|--set)
                 set
+                exit 0
                 ;;
             x|-x|--clear)
                 gsettings set org.gnome.desktop.app-folders folder-children "[]"
                 dconf reset -f /org/gnome/desktop/app-folders/folders/
+                exit 0
                 ;;
             h|-h|--help)
                 help
                 exit 0
                 ;;
             *)
-                echo -e "\n${_C_RED}ERROR${_CLEAR}: $1 is not a valid option"
+                echo -e "\n${_C_RED}ERROR$_CLEAR: $1 is not a valid option"
                 help
                 exit 1
                 ;;
         esac
     done
 else
-    echo -e "\n${_C_RED}ERROR${_CLEAR}: run with a valid command as an argument"
+    echo -e "\n${_C_RED}ERROR$_CLEAR: run with a valid command as an argument"
     help
     exit 1
 fi
