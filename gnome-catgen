@@ -100,15 +100,17 @@ function _getfolders() {
 }
 
 function getapps() {
+    echo -ne "$_NEWLINE"
     while read -r cat; do
         [[ ! "$cat" = "@as" ]] && {
-            echo -ne "\n$_C_BLUE$cat$_C_WHITE:$_CLEAR $_NEWLINE"
-            ARRAY=( $(gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/Games/ apps \
+            echo -ne "$_C_BLUE$cat$_C_WHITE:$_CLEAR $_NEWLINE"
+            ARRAY=( $(gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/$cat/ apps \
                 | grep -v "@as \[\]" \
                 | sed "s|^\[['\"]||g;s|['\"]\]$||g;s|['\"]\ *,\ *['\"]|\n|g" \
                 | sed -re "s|\\\([\"\\\])|\1|g") )
             list_apps ${ARRAY[@]}
         }
+        echo
     done < <(gsettings get org.gnome.desktop.app-folders folder-children \
         | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g" \
         | sed -re "s|\\\([\"\\\])|\1|g")
