@@ -45,12 +45,11 @@ This will create (if it doesn't already exist) and open (with the editor set by 
 * `gnome-catgen -f` | `--get-folders`: list current folders
 * `gnome-catgen -a` | `--get-apps`: list current apps in each folder category
 * `gnome-catgen -r` | `--get-remaining`: list apps without a folder category
-* `gnome-catgen -g` | `--get`: list all of the above
 
 ### Edit ###
 
 * `gnome-catgen -c` | `--choose-remaining`: assign folder categories to unassigned apps
-* `gnome-catgen -e {CAT}` | `--edit-category {CAT}`: edit the _.category_ file of the folder category for **{CAT}**.
+* `gnome-catgen -e [CAT]` | `--edit-category [CAT]`: edit the _.category_ file of the folder category for **[CAT]**.
 
 ### Write ###
 

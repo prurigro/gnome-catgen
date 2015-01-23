@@ -4,8 +4,11 @@
 " Latest Revision: 1 July 2014
 
 " XDG Desktop File
-syn match gcDesktop '\ *[^\ #].*\.desktop\ *$'
-hi def link gcDesktop Statement
+syn match gcDesktop '\ *[^\ #]*\.desktop' contains=gcDesktopName,gcDesktopExtension
+syn match gcDesktopName '^.*\.desktop' contained contains=gcDesktopExtension
+syn match gcDesktopExtension '\.desktop' contained
+hi def link gcDesktopName String
+hi def link gcDesktopExtension Comment
 
 " Comments
 syn match gcComment "^\ *#.*$"
