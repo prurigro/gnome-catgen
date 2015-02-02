@@ -32,14 +32,15 @@ script_name="${0//*\/}"
     text_comma=','       # COMMA
 }
 
-# Takes a list of items and prints them stylishly in a terminal or simply prints them in a pipe
+# Takes a list of items and prints them stylishly in a terminal and as a list when piped
 function list_apps() {
     # Set $array to the passed values and exit if only the title exists
     array=(${@})
     [[ ${#array[*]} = 0 ]] \
         && return 1
 
-    [[ -t 1 ]] && {
+    # Run the following if not in a pipe and the tput command exists, otherwise fallback to an unformatted list
+    [[ -t 1 ]] && [[ $(type -P tput) ]] && {
         # Find the column width (the length of the longest item name + 1 for spacing)
         colwidth=0
         for item in ${array[@]}; do
@@ -65,16 +66,18 @@ function list_apps() {
             rightgap=$(( $(( $colwidth - $(wc -c <<< "$item") )) - $leftgap ))
             [[ $count -ge $array_per_line ]] && {
                 count=0
-                printf "\n "
+                printf '\n '
             }
-            [[ ! $count = 0 ]] && echo -ne " ${c_grey}|$c_clear "
-            printf "$c_white%s${c_grey}.desktop$c_clear%${leftgap}s%${rightgap}s" "$(sed 's|\.desktop||' <<< $item)" "" ""
+            [[ ! $count = 0 ]] \
+                && printf " $c_grey|$c_clear "
+            printf "$c_white%s$c_grey%s$c_clear%${leftgap}s%${rightgap}s" "$(sed 's|\.desktop||' <<< $item)" '.desktop' '' ''
             count=$(expr $count + 1)
         done
-        echo
+        printf '\n'
     } || {
+        # Display all items as an unformatted, space-separated list
         for item in ${array[@]}; do
-            echo -n "$item "
+            printf '%s ' "$item"
         done
     }
 }
@@ -116,7 +119,7 @@ function getapps() {
 function getremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: Config folder '$gnome_catpath' either doesn't exist or isn't writable"
+        echo -e "\n${c_red}ERROR$c_clear: Config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
         exit 1
     }
 
@@ -146,7 +149,7 @@ function getremaining() {
 function set() {
     # Fail if the config directory doesn't exist, otherwise announce initiation
     [[ ! -d "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't readable"
+        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't readable" 2>&1
         exit 1
     }
     echo -e "\n${c_white}Applying current folder configuration...$c_clear\n"
@@ -191,7 +194,7 @@ function set() {
         # Write the category and its applications if the temp file isn't empty
         [[ -n "$notempty" ]] && {
             # Add $cat to the dconf categories list if it contained any valid apps
-            categories="${categories}, '$(sed 's|\\|\\\\\\|g'";s|'|\\\'|g" <<< "$cat")'"
+            categories="$categories, '$(sed 's|\\|\\\\\\|g'";s|'|\\\'|g" <<< "$cat")'"
 
             # Write the folder category's name to dconf
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"$cat"/ name "$cat"
@@ -221,7 +224,7 @@ function set() {
 function chooseremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't writable"
+        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
         exit 1
     }
 
@@ -258,7 +261,7 @@ function chooseremaining() {
                         break
                         ;;
                     *)
-                        echo -e "\n${c_red}ERROR$c_clear: Invalid option"
+                        echo -e "\n${c_red}ERROR$c_clear: Invalid option" 2>&1
                         ;;
                 esac
             done
@@ -275,7 +278,7 @@ function editcategory() {
         echo "Editing ${1}..."
         "$EDITOR" "$gnome_catpath/${1}.category"
     else
-        echo -e "\n${c_red}ERROR$c_clear: run with a category name as an argument"
+        echo -e "\n${c_red}ERROR$c_clear: run with a category name as an argument" 2>&1
         help
         exit 1
     fi
@@ -305,7 +308,7 @@ function help() {
 
 # Fail if the config directory is read only or doesn't exist
 [[ ! -w "$gnome_catpath" ]] && {
-    echo -e "\n${c_red}ERROR$c_clear: the config folder @ $gnome_catpath doesn't exist or can't be written to"
+    echo -e "\n${c_red}ERROR$c_clear: the config folder @ $gnome_catpath doesn't exist or can't be written to" 2>&1
     exit 1
 }
 
@@ -347,14 +350,14 @@ if [[ -n "$1" ]]; then
                 exit 0
                 ;;
             *)
-                echo -e "\n${c_red}ERROR$c_clear: $1 is not a valid option"
+                echo -e "\n${c_red}ERROR$c_clear: $1 is not a valid option" 2>&1
                 help
                 exit 1
                 ;;
         esac
     done
 else
-    echo -e "\n${c_red}ERROR$c_clear: run with a valid command as an argument"
+    echo -e "\n${c_red}ERROR$c_clear: run with a valid command as an argument" 2>&1
     help
     exit 1
 fi
