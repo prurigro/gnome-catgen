@@ -123,6 +123,7 @@ function getremaining() {
         exit 1
     }
 
+    shopt -s nullglob
     [[ $(echo "$system_apps_dir"/*.desktop) ]] && \
         # Create a list of the system applications that don't have NoDisplay=true or Hidden=true
         applist=$(egrep -iL "(nodisplay|hidden)\s*=\s*true" "$system_apps_dir"/*.desktop \
@@ -148,6 +149,7 @@ function getremaining() {
                 && applist="$(sed "s|$application\ *||" <<< $applist)"
         done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category)
     }
+    shopt -u nullglob
 
     # Output each remaining app
     for application in ${applist[@]}; do
