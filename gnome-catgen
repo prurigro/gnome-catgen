@@ -94,7 +94,7 @@ function getfolders() {
 # Gets the list of folders based on *.category
 function _getfolders() {
     for cat in "$gnome_catpath"/*.category; do
-        [[ -n "$(cat "$cat" | grep -v -e '^ *#')" ]] \
+        [[ -n "$(cat "$cat" | egrep -v '^ *#')" ]] \
             && echo "$cat"
     done | sed 's|^.*\/||g;s/.category$//g'
 }
@@ -123,26 +123,35 @@ function getremaining() {
         exit 1
     }
 
-    # Create a list of all the applications that don't have NoDisplay=true or Hidden=true
-    applist=$(grep -L -i -E "(nodisplay|hidden)\ *=\ *true" "$system_apps_dir"/*.desktop "$local_apps_dir"/*.desktop \
-        | sed 's|^.*\/||g' \
-        | sort -u)
+    [[ $(echo "$system_apps_dir"/*.desktop) ]] && \
+        # Create a list of the system applications that don't have NoDisplay=true or Hidden=true
+        applist=$(egrep -iL "(nodisplay|hidden)\s*=\s*true" "$system_apps_dir"/*.desktop \
+            | sed 's|^.*\/||g' \
+            | sort -u)
+    [[ $(echo "$local_apps_dir"/*.desktop) ]] && {
+        # Create a list of the local applications that don't have NoDisplay=true or Hidden=true
+        applist=$(printf '%s\n%s' "$applist" "$(egrep -iL "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir"/*.desktop \
+            | sed 's|^.*\/||g')" \
+            | sort -u)
 
-    # Remove $system_apps_dir with duplicates in $local_apps_dir that contain NoDisplay=true or Hidden=true
-    while read -r application; do
-        applist=$(sed "s|$application\ *||" <<< $applist)
-    done < <(grep -l -i -E "(nodisplay|hidden)\ *=\ *true" "$local_apps_dir"/*.desktop \
-        | grep -o -e "[^\/]*$" | sort -u)
+        # Remove $system_apps_dir with duplicates in $local_apps_dir that contain NoDisplay=true or Hidden=true
+        while read -r application; do
+            applist=$(sed "s|$application\ *||" <<< $applist)
+        done < <(egrep -il "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir"/*.desktop \
+            | egrep -o '[^\/]*$' | sort -u)
+    }
 
     # Remove all applications that are defined in gnome-catgen categories
-    while read -r application; do
-        [[ $(grep -v -e "^ *#" <<< '$application') ]] && [[ -n "$application" ]] \
-            && applist="$(sed "s|$application\ *||" <<< $applist)"
-    done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category)
+    [[ $(echo "$gnome_catpath"/*.category) ]] && {
+        while read -r application; do
+            [[ $(egrep -v '^ *#' <<< '$application') ]] && [[ -n "$application" ]] \
+                && applist="$(sed "s|$application\ *||" <<< $applist)"
+        done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category)
+    }
 
     # Output each remaining app
     for application in ${applist[@]}; do
-        echo "$application"
+        printf '%s\n' "$application"
     done
 }
 
@@ -172,15 +181,15 @@ function set() {
         # Add applications from the category if they exist, are set to display and aren't commented
         echo -e "\n${c_white}Evaluating: $c_blue$cat$c_clear"
         while read -r application; do
-            [[ $(grep -v -e "^ *#" <<< '$application') ]] && {
+            [[ $(egrep -v "^ *#" <<< '$application') ]] && {
                 if [[ -f "$local_apps_dir/$application" ]]; then
-                    [[ ! $(grep -i -E "(nodisplay|hidden)\ *=\ *true" "$local_apps_dir/$application") ]] && {
+                    [[ ! $(egrep -i "(nodisplay|hidden)\ *=\ *true" "$local_apps_dir/$application") ]] && {
                         [[ -n "$notempty" ]] && application=$(echo -e "\n$application")
                         applist=$applist$application
                         notempty=1
                     }
                 elif [[ -f "$system_apps_dir/$application" ]]; then
-                    [[ ! $(grep -i -E "(nodisplay|hidden)\ *=\ *true" "$system_apps_dir/$application") ]] && {
+                    [[ ! $(egrep -i "(nodisplay|hidden)\ *=\ *true" "$system_apps_dir/$application") ]] && {
                         [[ -n "$notempty" ]] \
                             && application=$(echo -e "\n$application")
                         applist=$applist$application
@@ -216,7 +225,7 @@ function set() {
 
     # Finalize the dconf categories list then write to dconf and finish
     categories="$(sed 's|\[, |\[|' <<< $categories)]"
-    [[ $(grep -v "\[\]" <<< "$categories") ]] \
+    [[ $(grep -v '\[\]' <<< "$categories") ]] \
         && gsettings set org.gnome.desktop.app-folders folder-children "$categories"
     echo -e "\n${c_green}Done!$c_clear"
 }
@@ -250,7 +259,7 @@ function chooseremaining() {
         # Offer to run the set function if changes were made
         if [ -n "$changed" ]; then
             while [ 0 ]; do
-                echo -en "\n${c_white}Update configured folder categories in Gnome? [${c_green}Y$c_white/${c_red}N$c_white]:$c_clear "
+                echo -en "\n${c_white}Update configured folder categories in Gnome? [${c_blue}Y$c_white/${c_blue}N$c_white]:$c_clear "
                 read update_question
                 case $update_question in
                     y|Y)
