@@ -14,104 +14,108 @@ gnome_catpath="$local_apps_dir-categories"
 script_name="${0//*\/}"
 
 # If $EDITOR isn't set, use vi
-[[ -z "$EDITOR" ]] \
-    && EDITOR=vi
+EDITOR=${EDITOR:=vi}
 
 # Colour definitions if not run in a pipe
 [[ -t 1 ]] && {
-    c_grey='\e[1;30m'    # DARK GREY
-    c_red='\e[1;31m'     # RED
-    c_green='\e[1;32m'   # GREEN
-    c_yellow='\e[1;33m'  # YELLOW
-    c_blue='\e[1;34m'    # BLUE
-    c_magenta='\e[1;35m' # MAGENTA
-    c_cyan='\e[1;36m'    # CYAN
-    c_white='\e[1;37m'   # WHITE
-    c_clear='\e[0m'      # DISABLES COLOUR
-    text_newline='\n'    # NEW LINE
-    text_comma=','       # COMMA
+    c_grey=$'\e[1;30m'    # DARK GREY
+    c_red=$'\e[1;31m'     # RED
+    c_green=$'\e[1;32m'   # GREEN
+    c_yellow=$'\e[1;33m'  # YELLOW
+    c_blue=$'\e[1;34m'    # BLUE
+    c_magenta=$'\e[1;35m' # MAGENTA
+    c_cyan=$'\e[1;36m'    # CYAN
+    c_white=$'\e[1;37m'   # WHITE
+    c_clear=$'\e[0m'      # DISABLES COLOUR
 }
 
 # Takes a list of items and prints them stylishly in a terminal and as a list when piped
 function list_apps() {
     # Set $array to the passed values and exit if only the title exists
     array=(${@})
-    [[ ${#array[*]} = 0 ]] \
+    (( ! ${#array[*]} )) \
         && return 1
 
     # Run the following if not in a pipe and the tput command exists, otherwise fallback to an unformatted list
-    [[ -t 1 ]] && [[ $(type -P tput) ]] && {
+    if [[ -t 1 ]] && type -P tput >/dev/null; then
         # Find the column width (the length of the longest item name + 1 for spacing)
         colwidth=0
-        for item in ${array[@]}; do
-            [[ $(wc -c <<< "$item") -gt $colwidth ]] \
-                && colwidth=$(( $(wc -c <<< "$item") - 1))
+
+        for item in "${array[@]}"; do
+            (( ${#item} > colwidth )) \
+                && colwidth=$(( ${#item} - 1))
         done
-        colwidth=$(( $colwidth + 3 ))
+        (( colwidth+=3 ))
 
         # Find the number of items that can be squeezed on a single line
         array_per_line=1
-        while [ $(( $(( $array_per_line + 1 )) * $colwidth)) -lt $(( $(tput cols) - 2 )) ]; do
-            array_per_line=$(( $array_per_line + 1 ))
+        while (( $(( $(( array_per_line + 1 )) * colwidth )) < $(( $(tput cols) - 2 )) )); do
+            (( array_per_line++ ))
         done
-        while [ $(( $array_per_line * $colwidth )) -lt $(( $(tput cols) - 2 )) ]; do
-            colwidth=$(( $colwidth + 1 ))
+        while (( $(( array_per_line * colwidth )) < $(( $(tput cols) - 2 )) )); do
+            (( colwidth++ ))
         done
-        colwidth=$(( $colwidth - 3 ))
+        (( colwidth-=3 ))
 
         # Print the list
-        printf " "
-        count=0 ; for item in ${array[@]}; do
-            leftgap=$(( $(( $colwidth - $(wc -c <<< "$item") )) / 2 ))
-            rightgap=$(( $(( $colwidth - $(wc -c <<< "$item") )) - $leftgap ))
-            [[ $count -ge $array_per_line ]] && {
+        printf ' '
+        count=0
+        for item in "${array[@]}"; do
+            leftgap=$(( $(( colwidth - ${#item} )) / 2 ))
+            rightgap=$(( $(( colwidth - ${#item} )) - leftgap ))
+            (( count >= array_per_line )) && {
                 count=0
                 printf '\n '
             }
-            [[ ! $count = 0 ]] \
-                && printf " $c_grey|$c_clear "
+            (( count )) && printf '%s' " $c_grey|$c_clear "
             printf "$c_white%s$c_grey%s$c_clear%${leftgap}s%${rightgap}s" "$(sed 's|\.desktop||' <<< $item)" '.desktop' '' ''
-            count=$(expr $count + 1)
+            (( count++ ))
         done
         printf '\n'
-    } || {
+    else
         # Display all items as an unformatted, space-separated list
-        for item in ${array[@]}; do
+        for item in "${array[@]}"; do
             printf '%s ' "$item"
         done
-    }
+    fi
 }
 
 # Gets the list of folders based on the dconf configuration
 function getfolders() {
-    eval echo -e $(gsettings get org.gnome.desktop.app-folders folder-children \
+    printf '%s\n' "$(eval printf '%s' "$(gsettings get org.gnome.desktop.app-folders folder-children \
         | sed 's|^@as \[\]|None|g' \
         | sed "s|^\[['\"]||g;s|['\"]\]$||g;s|['\"]\ *,\ *['\"]|,\ |g" \
         | sed -re "s|\\\([\"\\\])|\1|g" \
-        | sed 's|^|\${c_blue}|g;s|$|\$c_clear|;s|, |\$c_white$text_comma \${c_blue}|g')
+        | sed 's|^|${c_blue}|g;s|$|$c_clear|;s|, |$c_white, ${c_blue}|g')")"
 }
 
 # Gets the list of folders based on *.category
 function _getfolders() {
-    for cat in "$gnome_catpath"/*.category; do
-        [[ -n "$(cat "$cat" | egrep -v '^ *#')" ]] \
-            && echo "$cat"
-    done | sed 's|^.*\/||g;s/.category$//g'
+    for catfile in "$gnome_catpath"/*.category; do
+        while read -r; do
+            [[ ! "$REPLY" =~ ^\ *\# ]] && {
+                cat="${catfile/*\/}"
+                cat="${cat/\.category}"
+                printf '%s\n' "$cat"
+                break
+            }
+        done < "$catfile"
+    done
 }
 
 # Gets the list of configured apps
 function getapps() {
-    echo -ne "$text_newline"
+    printf '\n'
     while read -r cat; do
-        [[ ! "$cat" = "@as" ]] && {
-            echo -ne "$c_blue$cat$c_white:$c_clear $text_newline"
-            ARRAY=( $(gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/$cat/ apps \
+        [[ ! "$cat" = '@as' ]] && {
+            printf '%s \n' "$c_blue$cat$c_white:$c_clear"
+            array=( $(gsettings get org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"$cat"/ apps \
                 | grep -v "@as \[\]" \
                 | sed "s|^\[['\"]||g;s|['\"]\]$||g;s|['\"]\ *,\ *['\"]|\n|g" \
                 | sed -re "s|\\\([\"\\\])|\1|g") )
-            list_apps ${ARRAY[@]}
+            list_apps ${array[@]}
         }
-        echo
+        printf '\n'
     done < <(gsettings get org.gnome.desktop.app-folders folder-children \
         | sed "s/\[//g;s/\]//g;s/^['\"]//g;s/['\"]$//g;s/['\"],\ *['\"]/\n/g" \
         | sed -re "s|\\\([\"\\\])|\1|g")
@@ -119,10 +123,12 @@ function getapps() {
 
 # Tests that a directory contains files with a given extension
 function test_dir() {
+    local status=1
     shopt -s nullglob
-    [[ $(echo "$1"/*.$2) ]] \
-        && local status=0 \
-        || local status=1
+    for dir in "$1"/*."$2"; do
+        status=0
+        break
+    done
     shopt -u nullglob
     return $status
 }
@@ -131,33 +137,33 @@ function test_dir() {
 function getremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: Config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
+        printf '\n%s\n' "${c_red}ERROR$c_clear: Config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
         exit 1
     }
 
     test_dir "$system_apps_dir" 'desktop' && {
         # Create a list of the system applications that don't have NoDisplay=true or Hidden=true
-        applist=$(egrep -iL "(nodisplay|hidden)\s*=\s*true" "$system_apps_dir"/*.desktop \
+        applist=$(egrep -iL "(nodisplay|hidden|notshowin)\s*=\s*(true|gnome)" "$system_apps_dir"/*.desktop \
             | sed 's|^.*\/||g' \
             | sort -u)
     }
     test_dir "$local_apps_dir" 'desktop' && {
         # Create a list of the local applications that don't have NoDisplay=true or Hidden=true
-        applist=$(printf '%s\n%s' "$applist" "$(egrep -iL "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir"/*.desktop \
+        applist=$(printf '%s\n%s' "$applist" "$(egrep -iL "(nodisplay|hidden|notshowin)\s*=\s*(true|gnome)" "$local_apps_dir"/*.desktop \
             | sed 's|^.*\/||g')" \
             | sort -u)
 
         # Remove $system_apps_dir with duplicates in $local_apps_dir that contain NoDisplay=true or Hidden=true
         while read -r application; do
             applist=$(sed "s|$application\ *||" <<< $applist)
-        done < <(egrep -il "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir"/*.desktop \
+        done < <(egrep -il "(nodisplay|hidden|notshowin)\s*=\s*(true|gnome)" "$local_apps_dir"/*.desktop \
             | egrep -o "[^\/]*$" | sort -u)
     }
 
     # Remove all applications that are defined in gnome-catgen categories
     test_dir "$gnome_catpath" 'category' && {
         while read -r application; do
-            [[ $(egrep -v '^ *#' <<< '$application') ]] && [[ -n "$application" ]] \
+            egrep -vq '^ *#' <<< '$application' && [[ -n "$application" ]] \
                 && applist="$(sed "s|$application\ *||" <<< $applist)"
         done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category)
     }
@@ -171,13 +177,13 @@ function getremaining() {
 function set() {
     # Fail if the config directory doesn't exist, otherwise announce initiation
     [[ ! -d "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't readable" 2>&1
+        printf '\n%s\n' "${c_red}ERROR$c_clear: config folder $c_blue$gnome_catpath$c_clear either doesn't exist or isn't readable" 2>&1
         exit 1
     }
-    echo -e "\n${c_white}Applying current folder configuration...$c_clear\n"
+    printf '\n%s\n' "${c_white}Applying current folder configuration...$c_clear"
 
     # Wipe out any old folder settings
-    echo -e "${c_white}Clearing old category data before populating folders...$c_clear"
+    printf '\n%s\n' "${c_white}Clearing old category data before populating folders...$c_clear"
     dconf reset -f /org/gnome/desktop/app-folders/folders/
 
     # Create a list of categories to work from using the non-empty .category files
@@ -192,19 +198,20 @@ function set() {
         unset applist
 
         # Add applications from the category if they exist, are set to display and aren't commented
-        echo -e "\n${c_white}Evaluating: $c_blue$cat$c_clear"
+        printf '\n%s\n' "${c_white}Evaluating: $c_blue$cat$c_clear"
         while read -r application; do
-            [[ $(egrep -v "^ *#" <<< '$application') ]] && {
+            egrep -vq "^ *#" <<< '$application' && {
                 if [[ -f "$local_apps_dir/$application" ]]; then
-                    [[ ! $(egrep -i "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir/$application") ]] && {
-                        [[ -n "$notempty" ]] && application=$(echo -e "\n$application")
+                    egrep -iq "(nodisplay|hidden)\s*=\s*true" "$local_apps_dir/$application" || {
+                        [[ -n "$notempty" ]] \
+                            && application=$(printf '\n%s\n' "$application")
                         applist=$applist$application
                         notempty=1
                     }
                 elif [[ -f "$system_apps_dir/$application" ]]; then
-                    [[ ! $(egrep -i "(nodisplay|hidden)\s*=\s*true" "$system_apps_dir/$application") ]] && {
+                    egrep -iq "(nodisplay|hidden)\s*=\s*true" "$system_apps_dir/$application" || {
                         [[ -n "$notempty" ]] \
-                            && application=$(echo -e "\n$application")
+                            && application=$(printf '\n%s\n' "$application")
                         applist=$applist$application
                         notempty=1
                     }
@@ -224,9 +231,11 @@ function set() {
             # Get the application list and escape any quotes, then write to dconf
             gsettings set org.gnome.desktop.app-folders.folder:/org/gnome/desktop/app-folders/folders/"$cat"/ apps \
                 "$(while read -r application; do
-                       [[ $(grep "'" <<< "$application") ]] \
-                           && sed 's|"|\\"|g;s|^|"|;s|$|"|' <<< "$application" \
-                           || sed "s|^|'|;s|$|'|" <<< "$application"
+                        if grep -q "'" <<< "$application"; then
+                           sed 's|"|\\"|g;s|^|"|;s|$|"|' <<< "$application"
+                        else
+                           sed "s|^|'|;s|$|'|" <<< "$application"
+                        fi
                    done < <(sed 's|\\|\\\\\\|g' <<< "$applist") \
                        | sed -e ':a;N;$!ba;'"s/\n/, /g" \
                        | sed 's|^|\[|;s|$|\]|')"
@@ -238,43 +247,43 @@ function set() {
 
     # Finalize the dconf categories list then write to dconf and finish
     categories="$(sed 's|\[, |\[|' <<< $categories)]"
-    [[ $(grep -v '\[\]' <<< "$categories") ]] \
+    grep -vq '\[\]' <<< "$categories" \
         && gsettings set org.gnome.desktop.app-folders folder-children "$categories"
-    echo -e "\n${c_green}Done!$c_clear"
+    printf '\n%s\n' "${c_green}Done!$c_clear"
 }
 
 function chooseremaining() {
     # Fail if the config directory is read only or doesn't exist
     [[ ! -w "$gnome_catpath" ]] && {
-        echo -e "\n${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
+        printf '\n%s\n' "${c_red}ERROR$c_clear: config folder '$gnome_catpath' either doesn't exist or isn't writable" 2>&1
         exit 1
     }
 
     # Start if applications without folders exist
+    local changed=0 remaining=''
     remaining=$(getremaining)
-    if [ -n "$remaining" ]; then
+    if [[ -n "$remaining" ]]; then
         # Cycle through the output of getremaining
-        echo -ne "\n${c_white}Folder Categories:\n  "
+        printf '\n%s\n  ' "${c_white}Folder Categories:"
         getfolders
-        echo
-        echo -e "${c_white}Enter:\n  ${c_red}Category name $c_grey| ${c_red}Blank to skip $c_grey| ${c_red}Ctrl-c to quit$c_clear\n"
+        printf '\n%s\n  %s\n\n' "${c_white}Enter:" "${c_red}Category name $c_grey| ${c_red}Blank to skip $c_grey| ${c_red}Ctrl-c to quit$c_clear"
         while read -r app; do
-            if [[ -f "$system_apps_dir/$app" ]] || [[ -f "$local_apps_dir/$app" ]]; then
-                eval echo -ne "$(sed 's|^|\${c_white}|;s|\.desktop|\${c_grey}\.desktop\${c_clear}|' <<< "$app")"'${c_white}:${c_clear}\ '
+            if [[ -f "$system_apps_dir/$app" || -f "$local_apps_dir/$app" ]]; then
+                eval printf '%s' "$(sed 's|^|\${c_white}|;s|\.desktop|\${c_grey}\.desktop\${c_clear}|' <<< "$app")"'${c_white}:${c_clear}\ '
                 read -r catname </dev/tty
-                if [ -n "$catname" ]; then
+                if [[ -n "$catname" ]]; then
                     changed=1
-                    echo "$app" >> "$gnome_catpath/${catname}.category"
+                    printf '%s\n' "$app" >> "$gnome_catpath/$catname.category"
                 else
-                    echo -e "Skipping $c_white$(sed 's|\.desktop||' <<< $app)${c_grey}.desktop${c_clear}..."
+                    printf '%s\n' "Skipping $c_white$(sed 's|\.desktop||' <<< "$app")$c_grey.desktop$c_clear..."
                 fi
             fi
         done <<< "$remaining"
 
         # Offer to run the set function if changes were made
-        if [ -n "$changed" ]; then
-            while [ 0 ]; do
-                echo -en "\n${c_white}Update configured folder categories in Gnome? [${c_blue}Y$c_white/${c_blue}N$c_white]:$c_clear "
+        if (( changed )); then
+            while (( 1 )); do
+                printf '\n%s ' "${c_white}Update configured folder categories in Gnome? [${c_blue}Y$c_white/${c_blue}N$c_white]:$c_clear"
                 read update_question
                 case $update_question in
                     y|Y)
@@ -285,24 +294,24 @@ function chooseremaining() {
                         break
                         ;;
                     *)
-                        echo -e "\n${c_red}ERROR$c_clear: Invalid option" 2>&1
+                        printf '\n%s\n' "${c_red}ERROR$c_clear: Invalid option" 2>&1
                         ;;
                 esac
             done
         else
-            echo -e "\n${c_white}Finished without making changes$c_clear\n"
+            printf '\n%s\n\n' "${c_white}Finished without making changes$c_clear"
         fi
     else
-        echo -e "\n${c_white}No uncategorized applications found$c_clear\n"
+        printf '\n%s\n\n' "${c_white}No uncategorized applications found$c_clear"
     fi
 }
 
 function editcategory() {
-    if [ -n "$1" ]; then
-        echo "Editing ${1}..."
-        "$EDITOR" "$gnome_catpath/${1}.category"
+    if [[ -n "$1" ]]; then
+        printf '%s\n' "Editing $1..."
+        "$EDITOR" "$gnome_catpath/$1.category"
     else
-        echo -e "\n${c_red}ERROR$c_clear: run with a category name as an argument" 2>&1
+        printf '\n%s\n' "${c_red}ERROR$c_clear: run with a category name as an argument" 2>&1
         help
         exit 1
     fi
@@ -310,20 +319,20 @@ function editcategory() {
 
 function help() {
     # Display help information
-    echo -e "\n$c_white$script_name$c_clear: Gnome 3 Folder Category Configuration Tool\n"
-    echo -e "${c_blue}SYNOPSIS$c_clear\n  $c_yellow$script_name$c_clear [${c_magenta}COMMAND$c_clear] [${c_magenta}CAT$c_clear]\n"
-    echo -e "${c_blue}COMMANDS$c_clear\n  ${c_red}READ$c_clear"
-    echo -e "    $c_white-f$c_grey|$c_white--get-folders$c_clear          list active folders"
-    echo -e "    $c_white-a$c_grey|$c_white--get-apps$c_clear             list apps in each active folders"
-    echo -e "    $c_white-r$c_grey|$c_white--get-remaining$c_clear        list apps without a folder\n"
-    echo -e "  ${c_red}EDIT$c_clear"
-    echo -e "    $c_white-c$c_grey|$c_white--choose-remaining$c_clear     assign folders to unassigned apps"
-    echo -e "    $c_white-e$c_grey|$c_white--edit-category$c_clear [${c_magenta}CAT$c_clear]  edit the .category file for CAT\n"
-    echo -e "  ${c_red}WRITE$c_clear"
-    echo -e "    $c_white-s$c_grey|$c_white--set$c_clear                  apply current folder configuration"
-    echo -e "    $c_white-x$c_grey|$c_white--clear$c_clear                remove applied folder configuration\n"
-    echo -e "  ${c_red}INFORMATION$c_clear"
-    echo -e "    $c_white-h$c_grey|$c_white--help$c_clear                 display this help\n"
+    printf '\n%s\n\n'     "$c_white$script_name$c_clear: Gnome 3 Folder Category Configuration Tool"
+    printf '%s\n%63s\n\n' "${c_blue}SYNOPSIS$c_clear" "$c_yellow$script_name$c_clear [${c_magenta}COMMAND$c_clear] [${c_magenta}CAT$c_clear]"
+    printf '%s\n%17s\n'   "${c_blue}COMMANDS$c_clear" "${c_red}READ$c_clear"
+    printf '%45s%29s\n'   "$c_white-f$c_grey|$c_white--get-folders$c_clear" 'list active folders'
+    printf '%42s%45s\n'   "$c_white-a$c_grey|$c_white--get-apps$c_clear" 'list apps in each active folders'
+    printf '%47s%34s\n\n' "$c_white-r$c_grey|$c_white--get-remaining$c_clear" 'list apps without a folder'
+    printf '%17s\n'       "${c_red}EDIT$c_clear"
+    printf '%50s%38s\n'   "$c_white-c$c_grey|$c_white--choose-remaining$c_clear" 'assign folders to unassigned apps'
+    printf '%64s%33s\n\n' "$c_white-e$c_grey|$c_white--edit-category$c_clear [${c_magenta}CAT$c_clear]" 'edit the .category file for CAT'
+    printf '%18s\n'       "${c_red}WRITE$c_clear"
+    printf '%37s%52s\n'   "$c_white-s$c_grey|$c_white--set$c_clear" 'apply current folder configuration'
+    printf '%39s%51s\n\n' "$c_white-x$c_grey|$c_white--clear$c_clear" 'remove applied folder configuration'
+    printf '%24s\n'       "${c_red}INFORMATION$c_clear"
+    printf '%38s%34s\n\n' "$c_white-h$c_grey|$c_white--help$c_clear" 'display this help'
 }
 
 # Install the gnome-catgen config folder if it doesn't exist
@@ -332,13 +341,13 @@ function help() {
 
 # Fail if the config directory is read only or doesn't exist
 [[ ! -w "$gnome_catpath" ]] && {
-    echo -e "\n${c_red}ERROR$c_clear: the config folder @ $gnome_catpath doesn't exist or can't be written to" 2>&1
+    printf '\n%s\n' "${c_red}ERROR$c_clear: the config folder @ $gnome_catpath doesn't exist or can't be written to" 2>&1
     exit 1
 }
 
 # Parse commandline arguments
 if [[ -n "$1" ]]; then
-    for param in $@; do
+    for param in "$@"; do
         case "$param" in
             f|-f|--get-folders)
                 getfolders
@@ -374,14 +383,15 @@ if [[ -n "$1" ]]; then
                 exit 0
                 ;;
             *)
-                echo -e "\n${c_red}ERROR$c_clear: $1 is not a valid option" 2>&1
+                printf '\n%s\n' "${c_red}ERROR$c_clear: $1 is not a valid option" 2>&1
                 help
                 exit 1
                 ;;
         esac
     done
 else
-    echo -e "\n${c_red}ERROR$c_clear: run with a valid command as an argument" 2>&1
+    printf '\n%s\n' "${c_red}ERROR$c_clear: run with a valid command as an argument" 2>&1
     help
     exit 1
 fi
+
