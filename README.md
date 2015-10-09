@@ -1,6 +1,6 @@
 # gnome-catgen #
 
-A Gnome 3.12 and 3.14 Folder Category Configuration Tool
+A Gnome 3 Folder Category Configuration Tool
 
 ## Installation ##
 

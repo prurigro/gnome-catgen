@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# gnome-catgen | A Gnome 3.12 and 3.14 application-overview folder configuration tool
+# gnome-catgen | A Gnome 3 application-overview folder configuration tool
 #
 # Written by Kevin MacMartin
 # Released under the MIT license
