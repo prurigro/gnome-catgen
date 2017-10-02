@@ -7,10 +7,10 @@
 # Released under the MIT license
 #
 
-system_apps_dir=/usr/share/applications
-local_apps_dir="$HOME/.local/share/applications"
+xdg_apps_dirs="$(grep -oE '[^:]*' <<< "$XDG_DATA_DIRS" | sed 's|$|applications|' | tac)"
+xdg_user_apps="$HOME/.local/share/applications"
 
-gnome_catpath="$local_apps_dir-categories"
+gnome_catpath="$xdg_user_apps-categories"
 script_name="${0//*\/}"
 
 # Case insensitive regular expression determining whether a desktop file is disabled in gnome
@@ -46,16 +46,25 @@ function desktop_file_check {
             [[ -n "$REPLY" && "$REPLY" =~ \.desktop$ && ! "$REPLY" =~ ^\ *\# ]] && {
                 # All other lines should be xdg desktop files
                 application="$c_white${REPLY/\.desktop}$c_grey.desktop$c_clear"
+                app_not_found=1
 
-                if [[ -f "$local_apps_dir/$REPLY" ]]; then
-                    grep -iqE "$xdg_disabled" "$local_apps_dir/$REPLY" \
-                        && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$local_apps_dir$c_clear"
-                elif [[ -f "$system_apps_dir/$REPLY" ]]; then
-                    grep -iqE "$xdg_disabled" "$system_apps_dir/$REPLY" \
-                        && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$system_apps_dir$c_clear"
-                else
-                    printf '%s\n' "$application ${c_red}does not exist$c_clear"
-                fi
+                while read -r app_dir; do
+                    [[ -f "$app_dir/$REPLY" ]] && {
+                        app_not_found=0
+
+                        grep -iqE "$xdg_disabled" "$app_dir/$REPLY" \
+                            && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$app_dir$c_clear"
+                    }
+                done <<< "$xdg_apps_dirs"
+
+                (( app_not_found )) && {
+                    if [[ -f "$xdg_user_apps/$REPLY" ]]; then
+                        grep -iqE "$xdg_disabled" "$xdg_user_apps/$REPLY" \
+                            && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$xdg_user_apps$c_clear"
+                    else
+                        printf '%s\n' "$application ${c_red}does not exist$c_clear"
+                    fi
+                }
             }
         done < "$catfile"
 
@@ -202,18 +211,20 @@ function getremaining {
     declare -a get_applist=()
 
     # Create a list of the system applications that don't have NoDisplay=true or Hidden=true
-    test_dir "$system_apps_dir" 'desktop' && {
-        while read -r; do
-            get_applist=("${get_applist[@]}" "${REPLY/$system_apps_dir\/}")
-        done < <(grep -iLE "$xdg_disabled" "$system_apps_dir"/*.desktop | sort -u)
-    }
+    while read -r app_dir; do
+        test_dir "$app_dir" 'desktop' && {
+            while read -r; do
+                get_applist=("${get_applist[@]}" "${REPLY/$app_dir\/}")
+            done < <(grep -iLE "$xdg_disabled" "$app_dir"/*.desktop | sort -u)
+        }
+    done <<< "$xdg_apps_dirs"
 
     # Create a list of the local applications that don't have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
-    test_dir "$local_apps_dir" 'desktop' && {
+    test_dir "$xdg_user_apps" 'desktop' && {
         # Add local apps that don't have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
         while read -r; do
-            get_applist=("${get_applist[@]}" "${REPLY/$local_apps_dir\/}")
-        done < <(grep -iLE "$xdg_disabled" "$local_apps_dir"/*.desktop | sort -u)
+            get_applist=("${get_applist[@]}" "${REPLY/$xdg_user_apps\/}")
+        done < <(grep -iLE "$xdg_disabled" "$xdg_user_apps"/*.desktop | sort -u)
 
         # Remove system apps with duplicates local apps that have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
         while read -r; do
@@ -226,7 +237,7 @@ function getremaining {
 
             unset get_applist
             declare -a get_applist=("${tmp_get_applist[@]}")
-        done < <(grep -ilE "$xdg_disabled" "$local_apps_dir"/*.desktop \
+        done < <(grep -ilE "$xdg_disabled" "$xdg_user_apps"/*.desktop \
             | grep -oE "[^\/]*$" | sort -u)
 
         unset tmp_get_applist
@@ -250,7 +261,7 @@ function getremaining {
         unset tmp_get_applist
     }
 
-    # Set array to the get_applist
+    # Set array to get_applist
     array=("${get_applist[@]}")
 }
 
@@ -283,19 +294,29 @@ function set {
 
         while read -r application; do
             grep -vqE '^ *#' <<< "$application" && {
-                if [[ -f "$local_apps_dir/$application" ]]; then
-                    grep -iqE "$xdg_disabled" "$local_apps_dir/$application" || {
+                app_not_found=1
+
+                [[ -f "$xdg_user_apps/$application" ]] && {
+                    app_not_found=0
+
+                    grep -iqE "$xdg_disabled" "$xdg_user_apps/$application" || {
                         [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
                         set_applist=$set_applist$application
                         notempty=1
                     }
-                elif [[ -f "$system_apps_dir/$application" ]]; then
-                    grep -iqE "$xdg_disabled" "$system_apps_dir/$application" || {
-                        [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
-                        set_applist=$set_applist$application
-                        notempty=1
+                }
+
+                while read -r app_dir; do
+                    (( app_not_found )) && [[ -f "$app_dir/$application" ]] && {
+                        app_not_found=0
+
+                        grep -iqE "$xdg_disabled" "$app_dir/$application" || {
+                            [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
+                            set_applist=$set_applist$application
+                            notempty=1
+                        }
                     }
-                fi
+                done <<< "$xdg_apps_dirs"
             }
         done < <(cat "$gnome_catpath/$cat.category")
 
@@ -350,7 +371,14 @@ function chooseremaining {
         printf '\n%s\n  %s\n\n' "${c_white}Enter:" "${c_red}Category name $c_grey| ${c_red}Blank to skip $c_grey| ${c_red}Ctrl-c to quit$c_clear"
 
         for app in "${array[@]}"; do
-            if [[ -f "$system_apps_dir/$app" || -f "$local_apps_dir/$app" ]]; then
+            app_not_found=1
+
+            while read -r app_dir; do
+                [[ -d "$app_dir" && -f "$app_dir/$app" ]] \
+                    && app_not_found=0
+            done <<< "$xdg_apps_dirs"
+
+            if (( ! app_not_found )) || [[ -f "$xdg_user_apps/$app" ]]; then
                 eval printf '%s' "$(sed 's|^|\${c_white}|;s|\.desktop|\${c_grey}\.desktop\${c_clear}|' <<< "$app")"'${c_white}:${c_clear}\ '
                 read -r catname </dev/tty
 
@@ -367,8 +395,8 @@ function chooseremaining {
         if (( changed )); then
             while (( 1 )); do
                 printf '\n%s ' "${c_white}Update configured folder categories in Gnome? [${c_blue}Y$c_white/${c_blue}N$c_white]:$c_clear"
-
                 read -r update_question
+
                 case $update_question in
                     y|Y)
                         set
@@ -483,4 +511,3 @@ else
     help
     exit 1
 fi
-
