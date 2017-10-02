@@ -48,10 +48,10 @@ function desktop_file_check {
                 application="$c_white${REPLY/\.desktop}$c_grey.desktop$c_clear"
 
                 if [[ -f "$local_apps_dir/$REPLY" ]]; then
-                    egrep -iq "$xdg_disabled" "$local_apps_dir/$REPLY" \
+                    grep -iqE "$xdg_disabled" "$local_apps_dir/$REPLY" \
                         && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$local_apps_dir$c_clear"
                 elif [[ -f "$system_apps_dir/$REPLY" ]]; then
-                    egrep -iq "$xdg_disabled" "$system_apps_dir/$REPLY" \
+                    grep -iqE "$xdg_disabled" "$system_apps_dir/$REPLY" \
                         && printf '%s\n' "$application: ${c_yellow}is disabled in $c_cyan$system_apps_dir$c_clear"
                 else
                     printf '%s\n' "$application ${c_red}does not exist$c_clear"
@@ -198,60 +198,60 @@ function getremaining {
         exit 1
     }
 
-    # Declare the applist array
-    declare -a applist=()
+    # Declare the get application list
+    declare -a get_applist=()
 
     # Create a list of the system applications that don't have NoDisplay=true or Hidden=true
     test_dir "$system_apps_dir" 'desktop' && {
         while read -r; do
-            applist=("${applist[@]}" "${REPLY/$system_apps_dir\/}")
-        done < <(egrep -iL "$xdg_disabled" "$system_apps_dir"/*.desktop | sort -u)
+            get_applist=("${get_applist[@]}" "${REPLY/$system_apps_dir\/}")
+        done < <(grep -iLE "$xdg_disabled" "$system_apps_dir"/*.desktop | sort -u)
     }
 
     # Create a list of the local applications that don't have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
     test_dir "$local_apps_dir" 'desktop' && {
         # Add local apps that don't have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
         while read -r; do
-            applist=("${applist[@]}" "${REPLY/$local_apps_dir\/}")
-        done < <(egrep -iL "$xdg_disabled" "$local_apps_dir"/*.desktop | sort -u)
+            get_applist=("${get_applist[@]}" "${REPLY/$local_apps_dir\/}")
+        done < <(grep -iLE "$xdg_disabled" "$local_apps_dir"/*.desktop | sort -u)
 
         # Remove system apps with duplicates local apps that have NoDisplay=true, Hidden=true, or NotShowIn=Gnome
         while read -r; do
             application="$REPLY"
-            declare -a tmp_applist=()
+            declare -a tmp_get_applist=()
 
-            for app in "${applist[@]}"; do
-                [[ ! "$app" = "$application" ]] && tmp_applist=("${tmp_applist[@]}" "$app")
+            for app in "${get_applist[@]}"; do
+                [[ ! "$app" = "$application" ]] && tmp_get_applist=("${tmp_get_applist[@]}" "$app")
             done
 
-            unset applist
-            declare -a applist=("${tmp_applist[@]}")
-        done < <(egrep -il "$xdg_disabled" "$local_apps_dir"/*.desktop \
-            | egrep -o "[^\/]*$" | sort -u)
+            unset get_applist
+            declare -a get_applist=("${tmp_get_applist[@]}")
+        done < <(grep -ilE "$xdg_disabled" "$local_apps_dir"/*.desktop \
+            | grep -oE "[^\/]*$" | sort -u)
 
-        unset tmp_applist
+        unset tmp_get_applist
     }
 
     # Remove all applications that are defined in gnome-catgen categories
     test_dir "$gnome_catpath" 'category' && {
         while read -r; do
             application="$REPLY"
-            declare -a tmp_applist=()
+            declare -a tmp_get_applist=()
 
-            for app in "${applist[@]}"; do
+            for app in "${get_applist[@]}"; do
                 [[ ! "$app" = "$application" ]] \
-                    && tmp_applist=("${tmp_applist[@]}" "$app")
+                    && tmp_get_applist=("${tmp_get_applist[@]}" "$app")
             done
 
-            unset applist
-            declare -a applist=("${tmp_applist[@]}")
-        done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category | egrep -v '^ *#')
+            unset get_applist
+            declare -a get_applist=("${tmp_get_applist[@]}")
+        done < <(sed 's|\\|\\\\|g' "$gnome_catpath"/*.category | grep -vE '^ *#')
 
-        unset tmp_applist
+        unset tmp_get_applist
     }
 
-    # Set array to the applist
-    array=("${applist[@]}")
+    # Set array to the get_applist
+    array=("${get_applist[@]}")
 }
 
 function set {
@@ -275,31 +275,31 @@ function set {
 
     # Add the app data for each category and output an error if none is defined
     while read -r cat; do
-        # Reset the application list
-        unset applist
+        # Reset the set application list
+        unset set_applist
 
         # Add applications from the category if they exist, are set to display and aren't commented
         printf '\n%s\n' "${c_white}Evaluating: $c_blue$cat$c_clear"
 
         while read -r application; do
-            egrep -vq '^ *#' <<< "$application" && {
+            grep -vqE '^ *#' <<< "$application" && {
                 if [[ -f "$local_apps_dir/$application" ]]; then
-                    egrep -iq "$xdg_disabled" "$local_apps_dir/$application" || {
+                    grep -iqE "$xdg_disabled" "$local_apps_dir/$application" || {
                         [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
-                        applist=$applist$application
+                        set_applist=$set_applist$application
                         notempty=1
                     }
                 elif [[ -f "$system_apps_dir/$application" ]]; then
-                    egrep -iq "$xdg_disabled" "$system_apps_dir/$application" || {
+                    grep -iqE "$xdg_disabled" "$system_apps_dir/$application" || {
                         [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
-                        applist=$applist$application
+                        set_applist=$set_applist$application
                         notempty=1
                     }
                 fi
             }
         done < <(cat "$gnome_catpath/$cat.category")
 
-        applist=$(sort -u <<< "$applist")
+        set_applist=$(sort -u <<< "$set_applist")
 
         # Write the category and its applications if the temp file isn't empty
         [[ -n "$notempty" ]] && {
@@ -317,7 +317,7 @@ function set {
                         else
                            sed "s|^|'|;s|$|'|" <<< "$application"
                         fi
-                   done < <(sed 's|\\|\\\\\\|g' <<< "$applist") \
+                   done < <(sed 's|\\|\\\\\\|g' <<< "$set_applist") \
                        | sed -e ':a;N;$!ba;'"s/\n/, /g" \
                        | sed 's|^|\[|;s|$|\]|')"
         }
