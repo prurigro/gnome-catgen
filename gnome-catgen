@@ -7,7 +7,12 @@
 # Released under the MIT license
 #
 
-xdg_apps_dirs="$(grep -oE '[^:]*' <<< "$XDG_DATA_DIRS" | sed 's|$|applications|' | tac)"
+if [[ -n "$XDG_DATA_DIRS" ]]; then
+    xdg_apps_dirs="$(grep -oE '[^:]*' <<< "$XDG_DATA_DIRS" | sed 's|$|applications|' | tac)"
+else
+    xdg_apps_dirs=/usr/share/applications
+fi
+
 xdg_user_apps="$HOME/.local/share/applications"
 
 gnome_catpath="$xdg_user_apps-categories"
