@@ -8,7 +8,7 @@
 #
 
 if [[ -n "$XDG_DATA_DIRS" ]]; then
-    xdg_apps_dirs="$(grep -oE '[^:]*' <<< "$XDG_DATA_DIRS" | sed 's|$|applications|' | tac)"
+    xdg_apps_dirs="$(grep -oE '[^:]*' <<< "$XDG_DATA_DIRS" | sed 's|$|/applications|' | tac)"
 else
     xdg_apps_dirs=/usr/share/applications
 fi
