@@ -355,6 +355,7 @@ function set {
     # Finalize the dconf categories list then write to dconf and finish
     categories="$(sed 's|\[, |\[|' <<< "$categories")]"
     grep -vq '\[\]' <<< "$categories" && gsettings set org.gnome.desktop.app-folders folder-children "$categories"
+    gsettings reset org.gnome.shell app-picker-layout
     printf '\n%s\n' "${c_green}Done!$c_clear"
 }
 
