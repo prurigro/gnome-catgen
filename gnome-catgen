@@ -279,6 +279,9 @@ function set {
 
     printf '\n%s\n' "${c_white}Applying current folder configuration...$c_clear"
 
+    # String to separate the app name from the .desktop file
+    separator_string='%::::::::::%'
+
     # Wipe out any old folder settings
     printf '\n%s\n' "${c_white}Clearing old category data before populating folders...$c_clear"
     dconf reset -f /org/gnome/desktop/app-folders/folders/
@@ -305,6 +308,8 @@ function set {
                     app_not_found=0
 
                     grep -iqE "$xdg_disabled" "$xdg_user_apps/$application" || {
+                        app_name=$(grep -ie '^name *=' "$xdg_user_apps/$application" | head -n 1 | sed 's|^name *= *||I')
+                        application="$app_name $separator_string $application"
                         [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
                         set_applist=$set_applist$application
                         notempty=1
@@ -316,6 +321,8 @@ function set {
                         app_not_found=0
 
                         grep -iqE "$xdg_disabled" "$app_dir/$application" || {
+                            app_name=$(grep -ie '^name *=' "$app_dir/$application" | head -n 1 | sed 's|^name *= *||I')
+                            application="$app_name $separator_string $application"
                             [[ -n "$notempty" ]] && application=$(printf '\n%s\n' "$application")
                             set_applist=$set_applist$application
                             notempty=1
@@ -325,7 +332,7 @@ function set {
             }
         done < <(cat "$gnome_catpath/$cat.category")
 
-        set_applist=$(sort -u <<< "$set_applist")
+        set_applist=$(sort -u <<< "$set_applist" | sed "s|^.* $separator_string ||")
 
         # Write the category and its applications if the temp file isn't empty
         [[ -n "$notempty" ]] && {
