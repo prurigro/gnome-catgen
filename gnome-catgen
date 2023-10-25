@@ -285,6 +285,7 @@ function set {
     # Wipe out any old folder settings
     printf '\n%s\n' "${c_white}Clearing old category data before populating folders...$c_clear"
     dconf reset -f /org/gnome/desktop/app-folders/folders/
+    sleep 3
 
     # Create a list of categories to work from using the non-empty .category files
     _categories=$(_getfolders)
