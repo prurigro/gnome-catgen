@@ -2,12 +2,14 @@
 SCRIPT=gnome-catgen
 MAN=$(SCRIPT).1
 VIM=gnomecat.vim
+
 # COMMANDS
 INSTALL_RX=install -Dm755
 INSTALL_RO=install -Dm644
 RM=rm -f
 RMDIR=rmdir -p
 QUIET_TRUE=>/dev/null 2>&1 || true
+
 # LOCATIONS
 PREFIX=/usr
 BINDIR=$(DESTDIR)$(PREFIX)/bin
