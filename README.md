@@ -2,6 +2,12 @@
 
 A Gnome 3 Folder Category Configuration Tool
 
+## Deprecation Notice
+
+This project has been superseded by [gnome-app-grid-manager](https://github.com/prurigro/gnome-app-grid-manager).
+
+To migrate your config, move `~/.local/share/application-categories` to `~/.local/share/gnome-shell/categories`.
+
 ## Installation
 
 The package can be installed by running the command: `make install`, and can later be removed with: `make uninstall`.
